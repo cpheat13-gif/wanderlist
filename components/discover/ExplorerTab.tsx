@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PillButton } from '../PillButton';
-import { BookedPlaceRow } from './BookedPlaceRow';
+import { colorForCategory } from '../../theme/colors';
 import { exploreDestination, ExploreResult } from '../../lib/ai';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
 import { Place, PlaceCategory } from '../../lib/types';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.46);
 
 const CATEGORY_TABS: {
   key: PlaceCategory;
@@ -56,6 +60,8 @@ export function ExplorerTab({
   country,
   coverPhotoUrl,
   places,
+  flightCount = 0,
+  onBack,
   onPlaceAdded,
   onPlaceUpdate,
 }: {
@@ -64,9 +70,12 @@ export function ExplorerTab({
   country?: string;
   coverPhotoUrl: string | null;
   places: Place[];
+  flightCount?: number;
+  onBack?: () => void;
   onPlaceAdded?: (place: Place) => void;
   onPlaceUpdate?: (place: Place) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<PlaceCategory>('hotel');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ExploreResult[]>([]);
@@ -75,9 +84,26 @@ export function ExplorerTab({
   const [photosByResult, setPhotosByResult] = useState<Record<string, DestinationPhoto | null>>({});
   const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
   const [addingKey, setAddingKey] = useState<string | null>(null);
+  const [heroThumbs, setHeroThumbs] = useState<(string | null)[]>([null, null, null]);
 
   const activeTab = CATEGORY_TABS.find((t) => t.key === activeCategory)!;
   const categoryPlaces = places.filter((p) => p.category === activeCategory);
+
+  useEffect(() => {
+    const queries = [
+      `${destination} scenic view`,
+      `${destination} local culture`,
+      `${destination} food market`,
+    ];
+    queries.forEach((q, i) => {
+      fetchDestinationPhoto(q)
+        .then((photo) => {
+          if (photo) setHeroThumbs((prev) => { const next = [...prev]; next[i] = photo.url; return next; });
+        })
+        .catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleCategoryChange(cat: PlaceCategory) {
     setActiveCategory(cat);
@@ -118,13 +144,7 @@ export function ExplorerTab({
     try {
       const { data, error: insertError } = await supabase
         .from('places')
-        .insert({
-          trip_id: tripId,
-          name: result.name,
-          category: activeCategory,
-          notes: result.blurb,
-          is_booked: false,
-        })
+        .insert({ trip_id: tripId, name: result.name, category: activeCategory, notes: result.blurb, is_booked: false })
         .select()
         .single();
       if (insertError) throw new Error(insertError.message);
@@ -143,199 +163,367 @@ export function ExplorerTab({
     supabase.from('places').update({ is_booked: updated.is_booked }).eq('id', place.id);
   }
 
-  function handleChangeConfirmation(place: Place, value: string) {
-    const updated = { ...place, confirmation_number: value || null };
-    onPlaceUpdate?.(updated);
-    supabase.from('places').update({ confirmation_number: updated.confirmation_number }).eq('id', place.id);
-  }
+  const bookedCount = places.filter((p) => p.is_booked).length;
 
   return (
-    <View className="flex-1">
-      {/* Full-screen photo background */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-        {coverPhotoUrl ? (
-          <Image source={{ uri: coverPhotoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-        ) : (
-          <View className="flex-1 bg-neutral-900 items-center justify-center">
-            <Text className="text-neutral-700 text-5xl">⊙</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#F2F2F4' }}
+      contentContainerStyle={{ paddingBottom: 110 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Hero card ── */}
+      <View style={{ marginHorizontal: 12, marginTop: insets.top + 4 }}>
+        <View
+          style={{
+            borderRadius: 28,
+            overflow: 'hidden',
+            height: HERO_HEIGHT,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.18,
+            shadowRadius: 16,
+            elevation: 10,
+          }}
+        >
+          {coverPhotoUrl ? (
+            <Image source={{ uri: coverPhotoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          ) : (
+            <View style={{ flex: 1, backgroundColor: '#1C1C2E', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#444', fontSize: 52 }}>⊙</Text>
+            </View>
+          )}
+
+          {/* Gradient — bottom 60% darkens */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.42)', 'rgba(0,0,0,0.84)']}
+            locations={[0.38, 0.68, 1]}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' }}
+          />
+
+          {/* Thumbnail column — right side */}
+          <View style={{ position: 'absolute', right: 14, top: 14, gap: 10 }}>
+            {heroThumbs.map((url, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 18,
+                  overflow: 'hidden',
+                  borderWidth: 3,
+                  borderColor: 'white',
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                }}
+              >
+                {url ? (
+                  <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                ) : null}
+              </View>
+            ))}
           </View>
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(11,11,14,0.8)', '#0B0B0E']}
-          locations={[0.15, 0.48, 0.72]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
+
+          {/* Back button */}
+          <Pressable
+            onPress={onBack}
+            style={{
+              position: 'absolute',
+              top: 14,
+              left: 14,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255,255,255,0.88)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.14,
+              shadowRadius: 4,
+            }}
+          >
+            <Text style={{ fontSize: 22, color: '#111', lineHeight: 26 }}>‹</Text>
+          </Pressable>
+
+          {/* Destination name + location */}
+          <View style={{ position: 'absolute', bottom: 22, left: 22, right: 100 }}>
+            <Text style={{ color: 'white', fontSize: 34, fontWeight: '700', letterSpacing: -0.5 }} numberOfLines={1}>
+              {destination}
+            </Text>
+            {country ? (
+              <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 14, marginTop: 4 }} numberOfLines={1}>
+                📍 {country}
+              </Text>
+            ) : null}
+          </View>
+        </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 110 }}>
-        {/* Photo spacer + title */}
-        <View style={{ height: 175 }} className="justify-end px-5 pb-3">
-          <Text className="text-white text-2xl font-bold">Explore {destination}</Text>
+      {/* ── Stats row ── */}
+      <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 12, marginTop: 14 }}>
+        {[
+          { label: 'Places', value: places.length },
+          { label: 'Booked', value: bookedCount },
+          { label: 'Flights', value: flightCount },
+        ].map(({ label, value }) => (
+          <View
+            key={label}
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              borderRadius: 18,
+              paddingVertical: 14,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.07,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 5 }}>{label}</Text>
+            <Text style={{ color: '#059669', fontSize: 24, fontWeight: '700' }}>{value}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* ── Category tabs ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: 8, paddingVertical: 16 }}
+        style={{ flexGrow: 0 }}
+      >
+        {CATEGORY_TABS.map((tab) => {
+          const isActive = tab.key === activeCategory;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => handleCategoryChange(tab.key)}
+              style={{
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+                borderRadius: 100,
+                backgroundColor: isActive ? '#059669' : 'white',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: isActive ? 0 : 0.07,
+                shadowRadius: 3,
+                elevation: isActive ? 0 : 2,
+              }}
+            >
+              <Text
+                style={{
+                  color: isActive ? 'white' : '#6B7280',
+                  fontWeight: isActive ? '600' : '500',
+                  fontSize: 14,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View style={{ paddingHorizontal: 12 }}>
+        {/* ── Search ── */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <TextInput
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              borderRadius: 100,
+              paddingHorizontal: 20,
+              paddingVertical: 13,
+              color: '#111',
+              fontSize: 14,
+              marginRight: 8,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.07,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+            placeholder={activeTab.searchHint}
+            placeholderTextColor="#9CA3AF"
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => runSearch(query)}
+            returnKeyType="search"
+          />
+          <Pressable
+            onPress={() => runSearch(query)}
+            disabled={loading || !query.trim()}
+            style={{
+              backgroundColor: '#059669',
+              borderRadius: 100,
+              width: 46,
+              height: 46,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: loading || !query.trim() ? 0.45 : 1,
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 20 }}>⌕</Text>
+          </Pressable>
         </View>
 
-        {/* Category tabs */}
+        {/* ── Quick searches ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-          className="mb-4"
-          style={{ flexGrow: 0 }}
+          contentContainerStyle={{ gap: 8 }}
+          style={{ flexGrow: 0, marginBottom: 20 }}
         >
-          {CATEGORY_TABS.map((tab) => {
-            const isActive = tab.key === activeCategory;
-            return (
-              <Pressable
-                key={tab.key}
-                onPress={() => handleCategoryChange(tab.key)}
-                className="rounded-full px-4 py-2"
-                style={
-                  isActive
-                    ? { backgroundColor: 'rgba(255,255,255,0.92)' }
-                    : { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }
-                }
-              >
-                <Text
-                  className="text-sm font-medium"
-                  style={{ color: isActive ? '#0B0B0E' : 'rgba(255,255,255,0.8)' }}
-                >
-                  {tab.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {activeTab.quickSearches.map((label) => (
+            <Pressable
+              key={label}
+              onPress={() => { setQuery(label); runSearch(label); }}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: 100,
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderWidth: 1,
+                borderColor: '#E5E7EB',
+              }}
+            >
+              <Text style={{ color: '#6B7280', fontSize: 13 }}>{label}</Text>
+            </Pressable>
+          ))}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 16 }}>
-          {/* Search input */}
-          <View className="flex-row items-center mb-3">
-            <TextInput
-              className="flex-1 rounded-full px-4 py-3 text-white mr-2"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.12)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-              }}
-              placeholder={activeTab.searchHint}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={() => runSearch(query)}
-              returnKeyType="search"
-            />
-            <Pressable
-              onPress={() => runSearch(query)}
-              disabled={loading || !query.trim()}
-              className="bg-emerald-600 rounded-full w-11 h-11 items-center justify-center"
-              style={{ opacity: loading || !query.trim() ? 0.5 : 1 }}
-            >
-              <Text className="text-white text-lg">⌕</Text>
-            </Pressable>
-          </View>
-
-          {/* Quick searches */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8 }}
-            className="mb-5"
-            style={{ flexGrow: 0 }}
-          >
-            {activeTab.quickSearches.map((label) => (
-              <Pressable
-                key={label}
-                onPress={() => {
-                  setQuery(label);
-                  runSearch(label);
-                }}
-                className="rounded-full px-3 py-1.5"
+        {/* ── Added places ── */}
+        {categoryPlaces.length > 0 ? (
+          <View style={{ marginBottom: 22 }}>
+            <Text style={{ color: '#9CA3AF', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>
+              Added
+            </Text>
+            {categoryPlaces.map((place) => (
+              <View
+                key={place.id}
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.2)',
+                  backgroundColor: 'white',
+                  borderRadius: 16,
+                  padding: 14,
+                  marginBottom: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.07,
+                  shadowRadius: 4,
+                  elevation: 2,
                 }}
               >
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {/* Already-added places for this category */}
-          {categoryPlaces.length > 0 ? (
-            <View className="mb-5">
-              <Text className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">
-                Added
-              </Text>
-              {categoryPlaces.map((place) => (
-                <BookedPlaceRow
-                  key={place.id}
-                  place={place}
-                  onToggleBooked={() => handleToggleBooked(place)}
-                  onChangeConfirmation={(val) => handleChangeConfirmation(place, val)}
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: colorForCategory(place.category),
+                    marginRight: 12,
+                  }}
                 />
-              ))}
-            </View>
-          ) : null}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#111', fontWeight: '600', fontSize: 15 }}>{place.name}</Text>
+                  {place.notes ? (
+                    <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                      {place.notes}
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  onPress={() => handleToggleBooked(place)}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 7,
+                    backgroundColor: place.is_booked ? '#059669' : 'transparent',
+                    borderWidth: place.is_booked ? 0 : 1.5,
+                    borderColor: '#D1D5DB',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: 10,
+                  }}
+                >
+                  {place.is_booked ? (
+                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                  ) : null}
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
-          {error ? <Text className="text-red-400 mb-3 text-sm">{error}</Text> : null}
+        {error ? (
+          <Text style={{ color: '#EF4444', marginBottom: 12, fontSize: 13 }}>{error}</Text>
+        ) : null}
 
-          {/* Search results */}
-          {loading ? (
-            <View className="items-center mt-8">
-              <ActivityIndicator color="#059669" />
-            </View>
-          ) : results.length > 0 ? (
-            <View>
-              <Text className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">
-                Results
-              </Text>
-              {results.map((result) => {
-                const key = resultKey(result);
-                const photo = photosByResult[key];
-                const isAdded = addedKeys.has(key);
-                return (
-                  <View
-                    key={key}
-                    className="flex-row bg-white border border-neutral-200 rounded-2xl mb-3 overflow-hidden"
-                  >
-                    <View className="w-28 h-28 bg-neutral-100">
-                      {photo ? (
-                        <Image
-                          source={{ uri: photo.url }}
-                          style={{ width: '100%', height: '100%' }}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View className="w-full h-full items-center justify-center">
-                          <ActivityIndicator color="#059669" />
-                        </View>
-                      )}
-                    </View>
-                    <View className="flex-1 px-4 py-3 justify-center">
-                      <Text className="font-semibold text-neutral-900">{result.name}</Text>
-                      <Text className="text-neutral-600 text-sm mt-0.5" numberOfLines={2}>
-                        {result.blurb}
-                      </Text>
-                    </View>
-                    <View className="justify-center pr-3">
-                      <PillButton
-                        label={isAdded ? 'Added' : '+ Add'}
-                        onPress={() => handleAdd(result)}
-                        variant={isAdded ? 'ghost' : 'solid'}
-                        loading={addingKey === key}
-                        disabled={isAdded}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ) : categoryPlaces.length === 0 ? (
-            <Text className="text-white/40 text-center mt-6 text-sm">
-              Search for {activeTab.label.toLowerCase()} to add to your trip.
+        {/* ── Search results ── */}
+        {loading ? (
+          <View style={{ alignItems: 'center', marginTop: 28 }}>
+            <ActivityIndicator color="#059669" />
+          </View>
+        ) : results.length > 0 ? (
+          <View>
+            <Text style={{ color: '#9CA3AF', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>
+              Results
             </Text>
-          ) : null}
-        </View>
-      </ScrollView>
-    </View>
+            {results.map((result) => {
+              const key = resultKey(result);
+              const photo = photosByResult[key];
+              const isAdded = addedKeys.has(key);
+              return (
+                <View
+                  key={key}
+                  style={{
+                    flexDirection: 'row',
+                    backgroundColor: 'white',
+                    borderRadius: 18,
+                    marginBottom: 12,
+                    overflow: 'hidden',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.09,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  }}
+                >
+                  <View style={{ width: 110, height: 110, backgroundColor: '#F3F4F6' }}>
+                    {photo ? (
+                      <Image source={{ uri: photo.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                        <ActivityIndicator color="#059669" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flex: 1, padding: 14, justifyContent: 'center' }}>
+                    <Text style={{ fontWeight: '600', color: '#111', fontSize: 15 }}>{result.name}</Text>
+                    <Text style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
+                      {result.blurb}
+                    </Text>
+                  </View>
+                  <View style={{ justifyContent: 'center', paddingRight: 12 }}>
+                    <PillButton
+                      label={isAdded ? 'Added' : '+ Add'}
+                      onPress={() => handleAdd(result)}
+                      variant={isAdded ? 'ghost' : 'solid'}
+                      loading={addingKey === key}
+                      disabled={isAdded}
+                    />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : categoryPlaces.length === 0 ? (
+          <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 24, fontSize: 14, lineHeight: 22 }}>
+            Search for {activeTab.label.toLowerCase()} to add to your trip.
+          </Text>
+        ) : null}
+      </View>
+    </ScrollView>
   );
 }
