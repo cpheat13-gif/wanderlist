@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlightCard } from '../../../components/FlightCard';
@@ -55,25 +56,42 @@ export default function TripDetailScreen() {
     <SafeAreaView className="flex-1 bg-bg" edges={['bottom', 'left', 'right']}>
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
         {trip.cover_photo_url ? (
-          <View className="h-56 mb-5">
+          <View className="h-80 mb-6">
             <Image source={{ uri: trip.cover_photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            <LinearGradient
+              colors={['transparent', 'rgba(11,11,14,0.6)', 'rgba(11,11,14,0.98)']}
+              locations={[0, 0.55, 1]}
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '85%' }}
+            />
             {trip.cover_photo_credit_name ? (
               <Text
-                className="absolute bottom-2 right-3 text-text text-xs"
+                className="absolute top-3 right-3 bg-black/50 rounded-full px-3 py-1 text-text text-xs"
                 onPress={() => trip.cover_photo_credit_url && Linking.openURL(trip.cover_photo_credit_url)}
               >
-                Photo by {trip.cover_photo_credit_name} on Unsplash
+                Photo by {trip.cover_photo_credit_name}
               </Text>
             ) : null}
+            <View className="absolute bottom-0 left-0 right-0 px-5 pb-4">
+              {trip.destination ? (
+                <Text className="text-textMuted text-xs font-semibold uppercase mb-1" style={{ letterSpacing: 3 }}>
+                  {trip.destination}
+                </Text>
+              ) : null}
+              <Text className="text-text text-2xl font-bold uppercase" style={{ letterSpacing: 1 }}>
+                {trip.title}
+              </Text>
+            </View>
           </View>
-        ) : null}
+        ) : (
+          <View className="px-5 pt-4 mb-1">
+            <Text className="text-text text-2xl font-bold uppercase mb-1" style={{ letterSpacing: 1 }}>
+              {trip.title}
+            </Text>
+            {trip.destination ? <Text className="text-textMuted text-base">{trip.destination}</Text> : null}
+          </View>
+        )}
 
         <View className="px-5 pt-4">
-          <Text className="text-text text-2xl font-bold uppercase mb-1" style={{ letterSpacing: 1 }}>
-            {trip.title}
-          </Text>
-          {trip.destination ? <Text className="text-textMuted text-base mb-5">{trip.destination}</Text> : null}
-
           <View className="flex-row gap-3 mb-6">
             <PillButton label="+ Place" onPress={() => router.push(`/trip/${id}/add-place`)} variant="glass" />
             <PillButton label="+ Flight" onPress={() => router.push(`/trip/${id}/add-flight`)} variant="glass" />
