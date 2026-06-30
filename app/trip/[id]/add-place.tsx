@@ -11,6 +11,7 @@ const CATEGORIES: { value: PlaceCategory; label: string }[] = [
   { value: 'hotel', label: 'Hotel' },
   { value: 'restaurant', label: 'Restaurant' },
   { value: 'activity', label: 'Activity' },
+  { value: 'sightseeing', label: 'Sightseeing' },
 ];
 
 export default function AddPlaceScreen() {

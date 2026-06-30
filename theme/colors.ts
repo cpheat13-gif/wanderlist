@@ -9,9 +9,10 @@ export const colors = {
   hotel: '#D4A857',
   restaurant: '#C77B5E',
   activity: '#6E9C8A',
+  sightseeing: '#5E8FC7',
 } as const;
 
-export type PlaceCategory = 'hotel' | 'restaurant' | 'activity';
+export type PlaceCategory = 'hotel' | 'restaurant' | 'activity' | 'sightseeing';
 
 export function colorForCategory(category: PlaceCategory): string {
   return colors[category];

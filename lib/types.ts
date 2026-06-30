@@ -1,6 +1,6 @@
 export type TripStatus = 'idea' | 'booked' | 'past';
 
-export type PlaceCategory = 'hotel' | 'restaurant' | 'activity';
+export type PlaceCategory = 'hotel' | 'restaurant' | 'activity' | 'sightseeing';
 
 export interface Trip {
   id: string;

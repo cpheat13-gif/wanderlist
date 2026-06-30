@@ -97,7 +97,7 @@ const EXPLORE_DESTINATION_TOOL = {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Specific name, e.g. a real or plausible hotel/restaurant/trailhead name.' },
-            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity'] },
+            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
             photoQuery: { type: 'string', description: "2-4 word photo search query, e.g. 'Cusco hotel courtyard'." },
             blurb: { type: 'string', description: '1 sentence on what it is / why it fits the search.' },
           },
@@ -264,10 +264,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await callClaude(
         'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
           "Given a destination and a search term (which may be a vibe like 'hiking' or 'nightlife', not a literal " +
-          'category), suggest specific, well-matched hotels, restaurants, or activities there. Classify each result ' +
-          "into category 'hotel', 'restaurant', or 'activity' regardless of how the search term itself was phrased " +
-          "(e.g. a 'hiking' search should surface activity-category trailheads or guided hikes). Be concrete and " +
-          'concise, not generic.',
+          'category), suggest specific, well-matched hotels, restaurants, activities, or sightseeing spots there. ' +
+          "Classify each result into category 'hotel', 'restaurant', 'activity', or 'sightseeing' regardless of how " +
+          "the search term itself was phrased (e.g. a 'hiking' search should surface activity-category trailheads " +
+          "or guided hikes). Use 'sightseeing' for landmarks, museums, and viewpoints you visit and observe, and " +
+          "'activity' for tours, hikes, nightlife, and hands-on experiences. Be concrete and concise, not generic.",
         userText,
         EXPLORE_DESTINATION_TOOL
       );

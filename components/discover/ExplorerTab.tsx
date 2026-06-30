@@ -169,10 +169,10 @@ export function ExplorerTab({
                     return (
                       <View
                         key={key}
-                        style={{ width: 160 }}
+                        style={{ width: 220 }}
                         className="bg-white border border-neutral-200 rounded-2xl overflow-hidden"
                       >
-                        <View className="w-full h-24 bg-neutral-100">
+                        <View className="w-full h-36 bg-neutral-100">
                           {photo ? (
                             <Image source={{ uri: photo.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                           ) : (
@@ -221,7 +221,7 @@ export function ExplorerTab({
               const isAdded = addedKeys.has(key);
               return (
                 <View key={key} className="flex-row bg-white border border-neutral-200 rounded-2xl mb-3 overflow-hidden">
-                  <View className="w-20 h-20 bg-neutral-100">
+                  <View className="w-28 h-28 bg-neutral-100">
                     {photo ? (
                       <Image source={{ uri: photo.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     ) : (
@@ -230,7 +230,7 @@ export function ExplorerTab({
                       </View>
                     )}
                   </View>
-                  <View className="flex-1 px-3 py-2 justify-center">
+                  <View className="flex-1 px-4 py-3 justify-center">
                     <View className="flex-row items-center gap-1.5 mb-0.5">
                       <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colorForCategory(result.category) }} />
                       <Text className="text-neutral-400 text-[10px] uppercase">{result.category}</Text>

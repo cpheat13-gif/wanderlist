@@ -16,6 +16,7 @@ const CATEGORY_LABEL: Record<PlaceCategory, string> = {
   hotel: 'Hotels',
   restaurant: 'Restaurants',
   activity: 'Activities',
+  sightseeing: 'Sightseeing',
 };
 
 export default function TripDetailScreen() {
@@ -69,6 +70,7 @@ export default function TripDetailScreen() {
     hotel: places.filter((p) => p.category === 'hotel'),
     restaurant: places.filter((p) => p.category === 'restaurant'),
     activity: places.filter((p) => p.category === 'activity'),
+    sightseeing: places.filter((p) => p.category === 'sightseeing'),
   };
 
   return (

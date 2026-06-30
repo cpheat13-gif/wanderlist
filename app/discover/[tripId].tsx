@@ -7,8 +7,6 @@ import { DestinationTab, DestinationTabBar } from '../../components/discover/Des
 import { ExplorerTab } from '../../components/discover/ExplorerTab';
 import { FlightsTab } from '../../components/discover/FlightsTab';
 import { ChatTab } from '../../components/discover/ChatTab';
-import { PlanTab } from '../../components/discover/PlanTab';
-import { BookedTab } from '../../components/discover/BookedTab';
 import { supabase } from '../../lib/supabase';
 import { Trip } from '../../lib/types';
 
@@ -63,10 +61,6 @@ export default function DestinationScreen() {
         ) : null}
         {activeTab === 'flights' ? <FlightsTab tripId={trip.id} destination={name} country={country} /> : null}
         {activeTab === 'chat' ? <ChatTab destination={name} country={country} /> : null}
-        {activeTab === 'plan' ? (
-          <PlanTab tripId={trip.id} trip={trip} destination={name} country={country} onTripUpdate={setTrip} />
-        ) : null}
-        {activeTab === 'booked' ? <BookedTab tripId={trip.id} destination={name} country={country} /> : null}
       </View>
 
       <DestinationTabBar active={activeTab} onChange={setActiveTab} />

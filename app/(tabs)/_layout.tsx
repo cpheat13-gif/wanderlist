@@ -12,17 +12,24 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="discover"
         options={{
-          title: 'Trips',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✈︎</Text>,
+          title: 'New Trip',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✦</Text>,
         }}
       />
       <Tabs.Screen
-        name="discover"
+        name="index"
         options={{
-          title: 'Discover',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✦</Text>,
+          title: 'Planning',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◷</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="booked"
+        options={{
+          title: 'Booked',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✓</Text>,
         }}
       />
       <Tabs.Screen

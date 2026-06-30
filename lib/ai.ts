@@ -16,7 +16,7 @@ export interface DestinationResponse {
 
 export interface ItineraryItem {
   title: string;
-  category: 'hotel' | 'restaurant' | 'activity';
+  category: 'hotel' | 'restaurant' | 'activity' | 'sightseeing';
   description: string;
 }
 
