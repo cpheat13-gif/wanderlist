@@ -8,6 +8,8 @@ export interface Trip {
   title: string;
   destination: string | null;
   cover_photo_url: string | null;
+  cover_photo_credit_name: string | null;
+  cover_photo_credit_url: string | null;
   tiktok_url: string | null;
   status: TripStatus;
   created_at: string;

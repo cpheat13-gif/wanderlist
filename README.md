@@ -15,12 +15,15 @@ needed.
 Go to [supabase.com](https://supabase.com), create a project, and grab the
 project URL and anon key from Settings → API.
 
-### 2. Run the migration
+### 2. Run the migrations
 
-Open the SQL editor in your Supabase project and run the contents of
-`supabase/migrations/0001_init.sql`. This creates the `allowed_users`,
-`trips`, `places`, and `flights` tables with row-level security gated by
-household membership.
+Open the SQL editor in your Supabase project and run the migrations in
+`supabase/migrations/` in order:
+
+- `0001_init.sql` creates the `allowed_users`, `trips`, `places`, and
+  `flights` tables with row-level security gated by household membership.
+- `0002_cover_photo_credit.sql` adds the photo-attribution columns used by
+  the destination cover photo feature (see step 4).
 
 ### 3. Add your household's emails
 
@@ -41,6 +44,13 @@ cp .env.example .env
 
 Fill in `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` from
 your Supabase project settings.
+
+Optionally, fill in `EXPO_PUBLIC_UNSPLASH_ACCESS_KEY` to enable automatic
+destination cover photos when creating a trip. Get a free key at
+[unsplash.com/developers](https://unsplash.com/developers) — create an app,
+no credit card required, and copy the "Access Key" from its dashboard. The
+demo tier (50 requests/hour) is plenty for personal use. Without this key,
+trip creation still works, just without a cover photo.
 
 ### 5. Install dependencies and run
 
@@ -65,7 +75,7 @@ sign up with one of the allowlisted emails.
     web fallback since `react-native-maps` has no web support)
 - `components/` — themed UI primitives (`TripCard`, `PlaceCard`,
   `FlightCard`, `TikTokEmbed`, `PillButton`, `GlassCard`, `SectionLabel`)
-- `lib/` — `supabase.ts`, `auth.tsx`, `types.ts`, `tiktok.ts`
+- `lib/` — `supabase.ts`, `auth.tsx`, `types.ts`, `tiktok.ts`, `unsplash.ts`
 - `theme/` — color and typography tokens
 - `supabase/migrations/` — SQL schema and RLS policies
 
