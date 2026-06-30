@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Create .env from template",
+      "type": "shell",
+      "command": "test -f .env || cp .env.example .env",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "2. Install dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "3. Start Expo (tunnel, for QR code)",
+      "type": "shell",
+      "command": "npx expo start --tunnel",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}
