@@ -1,0 +1,39 @@
+export type TripStatus = 'idea' | 'booked' | 'past';
+
+export type PlaceCategory = 'hotel' | 'restaurant' | 'activity';
+
+export interface Trip {
+  id: string;
+  created_by: string;
+  title: string;
+  destination: string | null;
+  cover_photo_url: string | null;
+  tiktok_url: string | null;
+  status: TripStatus;
+  created_at: string;
+}
+
+export interface Place {
+  id: string;
+  trip_id: string;
+  name: string;
+  category: PlaceCategory;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Flight {
+  id: string;
+  trip_id: string;
+  airline: string | null;
+  flight_number: string | null;
+  from_airport: string;
+  to_airport: string;
+  departure_time: string | null;
+  arrival_time: string | null;
+  notes: string | null;
+  created_at: string;
+}
