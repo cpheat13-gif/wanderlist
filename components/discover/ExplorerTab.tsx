@@ -7,6 +7,7 @@ import { colorForCategory } from '../../theme/colors';
 import { exploreDestination, ExploreResult } from '../../lib/ai';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
+import { Place } from '../../lib/types';
 
 const QUICK_SEARCHES = ['Food', 'Hiking', 'Culture', 'Nightlife', 'Nature'];
 const HIGHLIGHTS_QUERY = 'top highlights and must-see spots';
@@ -20,11 +21,13 @@ export function ExplorerTab({
   destination,
   country,
   coverPhotoUrl,
+  onPlaceAdded,
 }: {
   tripId: string;
   destination: string;
   country?: string;
   coverPhotoUrl: string | null;
+  onPlaceAdded?: (place: Place) => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ExploreResult[]>([]);
@@ -89,6 +92,7 @@ export function ExplorerTab({
       });
       if (insertError) throw new Error(insertError.message);
       setAddedKeys((prev) => new Set(prev).add(key));
+      onPlaceAdded?.({ id: 'optimistic-' + key, trip_id: tripId, name: result.name, category: result.category as Place['category'], notes: result.blurb, is_booked: false, confirmation_number: null, scheduled_at: null, created_at: new Date().toISOString(), address: null, lat: null, lng: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add this place.');
     } finally {
@@ -98,31 +102,35 @@ export function ExplorerTab({
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 110 }}>
-        <View className="w-full bg-neutral-200" style={{ height: 256 }}>
-          {coverPhotoUrl ? (
-            <Image source={{ uri: coverPhotoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <Text className="text-neutral-400 text-3xl">⊙</Text>
-            </View>
-          )}
-          <LinearGradient
-            colors={['transparent', 'rgba(11,11,14,0.55)', 'rgba(11,11,14,0.96)']}
-            locations={[0, 0.5, 1]}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' }}
-          />
-          <View className="absolute bottom-0 left-0 right-0 p-5">
-            <Text className="text-white text-2xl font-bold">Explore {destination}</Text>
+      {/* Full-screen photo as fixed background */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        {coverPhotoUrl ? (
+          <Image source={{ uri: coverPhotoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <View className="flex-1 bg-neutral-900 items-center justify-center">
+            <Text className="text-neutral-700 text-5xl">⊙</Text>
           </View>
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(11,11,14,0.8)', '#0B0B0E']}
+          locations={[0.15, 0.48, 0.72]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      </View>
+
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 110 }}>
+        {/* Spacer that reveals the photo at the top */}
+        <View style={{ height: 210 }} className="justify-end px-5 pb-4">
+          <Text className="text-white text-2xl font-bold">Explore {destination}</Text>
         </View>
 
         <View style={{ padding: 20 }}>
           <View className="flex-row items-center mb-3">
             <TextInput
-              className="flex-1 bg-neutral-100 rounded-full px-4 py-3 text-neutral-900 mr-2"
+              className="flex-1 rounded-full px-4 py-3 text-white mr-2"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
               placeholder="e.g. hiking, rooftop bars..."
-              placeholderTextColor="#A3A3A3"
+              placeholderTextColor="rgba(255,255,255,0.4)"
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={() => runSearch(query)}
@@ -146,16 +154,17 @@ export function ExplorerTab({
                   setQuery(label);
                   runSearch(label);
                 }}
-                className="rounded-full px-4 py-2 border border-neutral-200 bg-neutral-50"
+                className="rounded-full px-4 py-2"
+                style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
               >
-                <Text className="text-neutral-700 text-sm">{label}</Text>
+                <Text className="text-white/80 text-sm">{label}</Text>
               </Pressable>
             ))}
           </ScrollView>
 
           {highlightsLoading || highlights.length > 0 ? (
             <View className="mb-5">
-              <Text className="text-neutral-900 font-semibold mb-2">Highlights</Text>
+              <Text className="text-white font-semibold mb-2">Highlights</Text>
               {highlightsLoading ? (
                 <View className="items-center py-6">
                   <ActivityIndicator color="#059669" />
@@ -211,7 +220,7 @@ export function ExplorerTab({
               <ActivityIndicator color="#059669" />
             </View>
           ) : results.length === 0 ? (
-            <Text className="text-neutral-400 text-center mt-10">
+            <Text className="text-white/40 text-center mt-10">
               Search for hotels, restaurants, or activities to add to your trip.
             </Text>
           ) : (

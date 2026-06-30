@@ -2,48 +2,37 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BookedPlaceRow } from '../../components/discover/BookedPlaceRow';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SectionLabel } from '../../components/SectionLabel';
 import { supabase } from '../../lib/supabase';
-import { Place, PlaceCategory, Trip } from '../../lib/types';
-
-const CATEGORY_SECTIONS: { key: PlaceCategory; label: string }[] = [
-  { key: 'hotel', label: 'Hotels' },
-  { key: 'restaurant', label: 'Food' },
-  { key: 'activity', label: 'Activities' },
-  { key: 'sightseeing', label: 'Sightseeing' },
-];
+import { Place, Trip } from '../../lib/types';
 
 export default function PlanningScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [placesByTrip, setPlacesByTrip] = useState<Record<string, Place[]>>({});
+  const [placeCountByTrip, setPlaceCountByTrip] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const { data: tripsData } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
     const allTrips = tripsData ?? [];
     setTrips(allTrips);
 
     const tripIds = allTrips.map((t) => t.id);
     if (tripIds.length === 0) {
-      setPlacesByTrip({});
+      setPlaceCountByTrip({});
       setLoading(false);
       return;
     }
 
-    const { data: placesData } = await supabase
-      .from('places')
-      .select('*')
-      .in('trip_id', tripIds)
-      .order('created_at');
-
-    const grouped: Record<string, Place[]> = {};
-    (placesData ?? []).forEach((place) => {
-      if (!grouped[place.trip_id]) grouped[place.trip_id] = [];
-      grouped[place.trip_id].push(place);
+    const { data: placesData } = await supabase.from('places').select('id, trip_id').in('trip_id', tripIds);
+    const counts: Record<string, number> = {};
+    (placesData ?? []).forEach((p: Pick<Place, 'id' | 'trip_id'>) => {
+      counts[p.trip_id] = (counts[p.trip_id] ?? 0) + 1;
     });
-    setPlacesByTrip(grouped);
+    setPlaceCountByTrip(counts);
     setLoading(false);
   }, []);
 
@@ -69,38 +58,15 @@ export default function PlanningScreen() {
     ]);
   }
 
-  async function toggleBooked(place: Place) {
-    const next = !place.is_booked;
-    setPlacesByTrip((prev) => ({
-      ...prev,
-      [place.trip_id]: (prev[place.trip_id] ?? []).map((p) => (p.id === place.id ? { ...p, is_booked: next } : p)),
-    }));
-    await supabase.from('places').update({ is_booked: next }).eq('id', place.id);
-  }
-
-  async function changeConfirmation(place: Place, value: string) {
-    const trimmed = value.trim() || null;
-    setPlacesByTrip((prev) => ({
-      ...prev,
-      [place.trip_id]: (prev[place.trip_id] ?? []).map((p) =>
-        p.id === place.id ? { ...p, confirmation_number: trimmed } : p
-      ),
-    }));
-    await supabase.from('places').update({ confirmation_number: trimmed }).eq('id', place.id);
-  }
-
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      <View className="px-5 pt-4 pb-1">
+      <View className="px-5 pt-4 pb-3">
         <SectionLabel>Planning</SectionLabel>
-        {trips.length > 0 ? (
-          <Text className="text-textMuted text-xs mt-1">Long-press a trip to delete it.</Text>
-        ) : null}
       </View>
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#D4A857" />}
       >
         {!loading && trips.length === 0 ? (
@@ -112,44 +78,49 @@ export default function PlanningScreen() {
         ) : null}
 
         {trips.map((trip) => {
-          const places = placesByTrip[trip.id] ?? [];
+          const count = placeCountByTrip[trip.id] ?? 0;
           return (
-            <View key={trip.id} className="mb-7">
-              <Pressable
-                onPress={() => router.push(`/discover/${trip.id}`)}
-                onLongPress={() => confirmDelete(trip)}
-                className="mb-3"
-              >
-                <Text className="text-text text-xl font-bold">{trip.title}</Text>
-                {trip.destination && trip.destination !== trip.title ? (
-                  <Text className="text-textMuted text-sm mt-0.5">{trip.destination}</Text>
-                ) : null}
-              </Pressable>
-
-              {places.length === 0 ? (
-                <Text className="text-textMuted text-sm">Tap to explore and add places.</Text>
+            <Pressable
+              key={trip.id}
+              onPress={() => router.push(`/discover/${trip.id}`)}
+              onLongPress={() => confirmDelete(trip)}
+              className="mb-4 rounded-2xl overflow-hidden"
+              style={{ height: 200 }}
+            >
+              {trip.cover_photo_url ? (
+                <Image
+                  source={{ uri: trip.cover_photo_url }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
               ) : (
-                CATEGORY_SECTIONS.map((section) => {
-                  const sectionPlaces = places.filter((p) => p.category === section.key);
-                  if (sectionPlaces.length === 0) return null;
-                  return (
-                    <View key={section.key} className="mb-4">
-                      <Text className="text-textMuted text-xs uppercase mb-2" style={{ letterSpacing: 2 }}>
-                        {section.label}
-                      </Text>
-                      {sectionPlaces.map((place) => (
-                        <BookedPlaceRow
-                          key={place.id}
-                          place={place}
-                          onToggleBooked={() => toggleBooked(place)}
-                          onChangeConfirmation={(value) => changeConfirmation(place, value)}
-                        />
-                      ))}
-                    </View>
-                  );
-                })
+                <View className="flex-1 bg-surface" />
               )}
-            </View>
+
+              <LinearGradient
+                colors={['transparent', 'rgba(11,11,14,0.65)', 'rgba(11,11,14,0.95)']}
+                locations={[0.3, 0.65, 1]}
+                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
+              />
+
+              <View className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex-row items-end justify-between">
+                <View className="flex-1 mr-3">
+                  <Text className="text-white text-xl font-bold" numberOfLines={1}>
+                    {trip.title}
+                  </Text>
+                  {trip.destination && trip.destination !== trip.title ? (
+                    <Text className="text-white/60 text-sm mt-0.5" numberOfLines={1}>
+                      {trip.destination}
+                    </Text>
+                  ) : null}
+                </View>
+                {count > 0 ? (
+                  <View className="bg-white/20 rounded-full px-3 py-1">
+                    <Text className="text-white text-xs font-semibold">{count} {count === 1 ? 'place' : 'places'}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </Pressable>
           );
         })}
       </ScrollView>
