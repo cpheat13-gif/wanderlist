@@ -1,3 +1,5 @@
+import { PlaceCategory } from './types';
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export interface DestinationSuggestion {
@@ -72,4 +74,36 @@ export function buildItinerary(params: {
   interests?: string;
 }): Promise<ItineraryResponse> {
   return postClaude<ItineraryResponse>({ mode: 'itinerary', ...params });
+}
+
+export interface ExploreResult {
+  name: string;
+  category: PlaceCategory;
+  photoQuery: string;
+  blurb: string;
+}
+
+export interface ExploreResponse {
+  results: ExploreResult[];
+}
+
+export interface AskResponse {
+  answer: string;
+}
+
+export function exploreDestination(params: {
+  destination: string;
+  country?: string;
+  query: string;
+}): Promise<ExploreResponse> {
+  return postClaude<ExploreResponse>({ mode: 'explore', ...params });
+}
+
+export function askAboutDestination(params: {
+  destination: string;
+  country?: string;
+  question: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<AskResponse> {
+  return postClaude<AskResponse>({ mode: 'ask', ...params });
 }

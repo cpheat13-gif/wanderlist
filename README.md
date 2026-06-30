@@ -24,6 +24,9 @@ Open the SQL editor in your Supabase project and run the migrations in
   `flights` tables with row-level security gated by household membership.
 - `0002_cover_photo_credit.sql` adds the photo-attribution columns used by
   the destination cover photo feature (see step 4).
+- `0003_booking_fields.sql` adds booking-status columns (`is_booked`,
+  `confirmation_number`, and `scheduled_at` on places) used by the Discover
+  tab's "Booked stuff" tab.
 
 ### 3. Add your household's emails
 

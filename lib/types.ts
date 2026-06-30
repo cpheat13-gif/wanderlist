@@ -24,6 +24,9 @@ export interface Place {
   lat: number | null;
   lng: number | null;
   notes: string | null;
+  is_booked: boolean;
+  confirmation_number: string | null;
+  scheduled_at: string | null;
   created_at: string;
 }
 
@@ -37,5 +40,7 @@ export interface Flight {
   departure_time: string | null;
   arrival_time: string | null;
   notes: string | null;
+  is_booked: boolean;
+  confirmation_number: string | null;
   created_at: string;
 }

@@ -83,13 +83,59 @@ const BUILD_ITINERARY_TOOL = {
   },
 };
 
+const EXPLORE_DESTINATION_TOOL = {
+  name: 'explore_destination',
+  description: 'Suggest specific hotels, restaurants, or activities in a destination matching a search query.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      results: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 8,
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Specific name, e.g. a real or plausible hotel/restaurant/trailhead name.' },
+            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity'] },
+            photoQuery: { type: 'string', description: "2-4 word photo search query, e.g. 'Cusco hotel courtyard'." },
+            blurb: { type: 'string', description: '1 sentence on what it is / why it fits the search.' },
+          },
+          required: ['name', 'category', 'photoQuery', 'blurb'],
+        },
+      },
+    },
+    required: ['results'],
+  },
+};
+
+const ANSWER_QUESTION_TOOL = {
+  name: 'answer_question',
+  description: "Answer the traveler's question about their destination.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      answer: { type: 'string', description: 'A helpful, concise, conversational answer (1-4 sentences unless more detail is clearly needed).' },
+    },
+    required: ['answer'],
+  },
+};
+
 interface ClaudeTool {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
 }
 
-async function callClaude(system: string, userText: string, tool: ClaudeTool) {
+interface ClaudeMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+async function callClaude(system: string, userTextOrMessages: string | ClaudeMessage[], tool: ClaudeTool) {
+  const messages: ClaudeMessage[] =
+    typeof userTextOrMessages === 'string' ? [{ role: 'user', content: userTextOrMessages }] : userTextOrMessages;
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -101,7 +147,7 @@ async function callClaude(system: string, userText: string, tool: ClaudeTool) {
       model: MODEL,
       max_tokens: 2048,
       system,
-      messages: [{ role: 'user', content: userText }],
+      messages,
       tools: [tool],
       tool_choice: { type: 'tool', name: tool.name },
     }),
@@ -177,7 +223,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination' or 'itinerary'" });
+    if (mode === 'explore') {
+      const { destination, country, query } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!query || typeof query !== 'string') {
+        res.status(400).json({ error: 'query is required' });
+        return;
+      }
+      const userText = [`Destination: ${destination}${country ? `, ${country}` : ''}`, `Search: ${query}`].join('\n');
+
+      const result = await callClaude(
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
+          "Given a destination and a search term (which may be a vibe like 'hiking' or 'nightlife', not a literal " +
+          'category), suggest specific, well-matched hotels, restaurants, or activities there. Classify each result ' +
+          "into category 'hotel', 'restaurant', or 'activity' regardless of how the search term itself was phrased " +
+          "(e.g. a 'hiking' search should surface activity-category trailheads or guided hikes). Be concrete and " +
+          'concise, not generic.',
+        userText,
+        EXPLORE_DESTINATION_TOOL
+      );
+      res.status(200).json(result);
+      return;
+    }
+
+    if (mode === 'ask') {
+      const { destination, country, question, history } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!question || typeof question !== 'string') {
+        res.status(400).json({ error: 'question is required' });
+        return;
+      }
+
+      const priorMessages: ClaudeMessage[] = Array.isArray(history)
+        ? history
+            .filter(
+              (m: unknown): m is { role: string; text: string } =>
+                !!m &&
+                typeof m === 'object' &&
+                ((m as { role?: unknown }).role === 'user' || (m as { role?: unknown }).role === 'assistant') &&
+                typeof (m as { text?: unknown }).text === 'string'
+            )
+            .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text }))
+        : [];
+
+      const result = await callClaude(
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist, currently ' +
+          `helping a traveler with questions about a trip to ${destination}${country ? `, ${country}` : ''}. ` +
+          'Answer their questions helpfully and conversationally, grounded in general knowledge about the destination.',
+        [...priorMessages, { role: 'user', content: question }],
+        ANSWER_QUESTION_TOOL
+      );
+      res.status(200).json(result);
+      return;
+    }
+
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'explore', or 'ask'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

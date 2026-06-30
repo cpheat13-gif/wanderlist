@@ -42,6 +42,7 @@ function RootNavigator() {
       <Stack.Screen name="trip/[id]/add-place" options={{ title: 'Add Place', presentation: 'modal' }} />
       <Stack.Screen name="trip/[id]/add-flight" options={{ title: 'Add Flight', presentation: 'modal' }} />
       <Stack.Screen name="trip/[id]/map" options={{ title: 'Map' }} />
+      <Stack.Screen name="discover/[tripId]" options={{ headerShown: false }} />
     </Stack>
   );
 }
