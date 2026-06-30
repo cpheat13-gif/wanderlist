@@ -109,6 +109,32 @@ const EXPLORE_DESTINATION_TOOL = {
   },
 };
 
+const PLAN_TRIP_TOOL = {
+  name: 'plan_trip',
+  description:
+    'Assign each already-chosen place to a specific day of the trip, building a sensible day-by-day schedule.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      summary: { type: 'string', description: '1-2 sentence overview of the plan and its logic.' },
+      schedule: {
+        type: 'array',
+        description: 'One entry per input place id.',
+        items: {
+          type: 'object',
+          properties: {
+            placeId: { type: 'string', description: 'Must exactly match one of the provided place ids.' },
+            day: { type: 'number', description: '1-indexed day number within the trip length.' },
+            notes: { type: 'string', description: 'Optional short note, e.g. a time-of-day suggestion.' },
+          },
+          required: ['placeId', 'day'],
+        },
+      },
+    },
+    required: ['summary', 'schedule'],
+  },
+};
+
 const ANSWER_QUESTION_TOOL = {
   name: 'answer_question',
   description: "Answer the traveler's question about their destination.",
@@ -283,7 +309,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'explore', or 'ask'" });
+    if (mode === 'plan') {
+      const { destination, country, startDate, endDate, places, flights } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!startDate || typeof startDate !== 'string' || !endDate || typeof endDate !== 'string') {
+        res.status(400).json({ error: 'startDate and endDate are required' });
+        return;
+      }
+      if (!Array.isArray(places) || places.length === 0) {
+        res.status(400).json({ error: 'places is required and must be non-empty' });
+        return;
+      }
+
+      const placesText = places
+        .map((p: { id: string; name: string; category: string; notes?: string | null; address?: string | null }) =>
+          [`id: ${p.id}`, `name: ${p.name}`, `category: ${p.category}`, p.notes ? `notes: ${p.notes}` : null, p.address ? `address: ${p.address}` : null]
+            .filter(Boolean)
+            .join(', ')
+        )
+        .join('\n');
+
+      const flightsText = Array.isArray(flights)
+        ? flights
+            .map((f: { fromAirport: string; toAirport: string; departureTime?: string | null; arrivalTime?: string | null }) =>
+              [`${f.fromAirport} -> ${f.toAirport}`, f.departureTime ? `departs ${f.departureTime}` : null, f.arrivalTime ? `arrives ${f.arrivalTime}` : null]
+                .filter(Boolean)
+                .join(', ')
+            )
+            .join('\n')
+        : '';
+
+      const userText = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        `Trip dates: ${startDate} to ${endDate}`,
+        flightsText ? `Flights:\n${flightsText}` : null,
+        `Places to schedule:\n${placesText}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      const result = await callClaude(
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
+          'The traveler has already chosen specific hotels, restaurants, and activities for their trip — your ' +
+          'job is only to schedule the given places into a sensible day-by-day plan across the trip dates, not ' +
+          'to invent new places. Group logically (e.g. activities earlier in the day, restaurants near meal ' +
+          'times) and respect any flight-constrained days (arrival day, departure day). Base your judgment on ' +
+          'general knowledge of the place names/categories/notes given — you do not have real-time location or ' +
+          'distance data. Return exactly one schedule entry per given place id.',
+        userText,
+        PLAN_TRIP_TOOL
+      );
+      res.status(200).json(result);
+      return;
+    }
+
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

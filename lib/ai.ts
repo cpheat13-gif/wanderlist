@@ -107,3 +107,31 @@ export function askAboutDestination(params: {
 }): Promise<AskResponse> {
   return postClaude<AskResponse>({ mode: 'ask', ...params });
 }
+
+export interface PlanScheduleItem {
+  placeId: string;
+  day: number;
+  notes?: string;
+}
+
+export interface PlanTripResponse {
+  summary: string;
+  schedule: PlanScheduleItem[];
+}
+
+export function planTrip(params: {
+  destination: string;
+  country?: string;
+  startDate: string;
+  endDate: string;
+  places: { id: string; name: string; category: PlaceCategory; notes: string | null; address: string | null }[];
+  flights: {
+    id: string;
+    fromAirport: string;
+    toAirport: string;
+    departureTime: string | null;
+    arrivalTime: string | null;
+  }[];
+}): Promise<PlanTripResponse> {
+  return postClaude<PlanTripResponse>({ mode: 'plan', ...params });
+}

@@ -12,6 +12,8 @@ export interface Trip {
   cover_photo_credit_url: string | null;
   tiktok_url: string | null;
   status: TripStatus;
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
 }
 

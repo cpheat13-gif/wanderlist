@@ -9,9 +9,21 @@ const STATUS_LABEL: Record<Trip['status'], string> = {
   past: 'PAST',
 };
 
-export function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
+export function TripCard({
+  trip,
+  onPress,
+  onLongPress,
+}: {
+  trip: Trip;
+  onPress: () => void;
+  onLongPress?: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} className="rounded-2xl overflow-hidden mb-4 h-56 bg-surfaceAlt">
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      className="rounded-2xl overflow-hidden mb-4 h-56 bg-surfaceAlt"
+    >
       {trip.cover_photo_url ? (
         <Image
           source={{ uri: trip.cover_photo_url }}

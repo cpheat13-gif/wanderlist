@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SectionLabel } from '../../components/SectionLabel';
 import { TripCard } from '../../components/TripCard';
@@ -25,20 +25,43 @@ export default function TripsScreen() {
     }, [loadTrips])
   );
 
+  async function handleDelete(trip: Trip) {
+    setTrips((prev) => prev.filter((t) => t.id !== trip.id));
+    const { error } = await supabase.from('trips').delete().eq('id', trip.id);
+    if (error) {
+      Alert.alert('Could not delete trip', error.message);
+      loadTrips();
+    }
+  }
+
+  function confirmDelete(trip: Trip) {
+    Alert.alert('Delete trip?', `"${trip.title}" will be permanently deleted.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => handleDelete(trip) },
+    ]);
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-bg">
       <View className="flex-1 px-5 pt-4">
-        <View className="flex-row items-center justify-between mb-6">
+        <View className="flex-row items-center justify-between mb-1">
           <SectionLabel>Trips</SectionLabel>
           <PillButton label="+ New Trip" onPress={() => router.push('/new-trip')} variant="glass" />
         </View>
+        {trips.length > 0 ? (
+          <Text className="text-textMuted text-xs mb-5">Long-press a trip to delete it.</Text>
+        ) : null}
 
         <FlatList
           data={trips}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadTrips} tintColor="#D4A857" />}
           renderItem={({ item }) => (
-            <TripCard trip={item} onPress={() => router.push(`/trip/${item.id}`)} />
+            <TripCard
+              trip={item}
+              onPress={() => router.push(`/trip/${item.id}`)}
+              onLongPress={() => confirmDelete(item)}
+            />
           )}
           ListEmptyComponent={
             !loading ? (

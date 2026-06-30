@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Linking, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlightCard } from '../../../components/FlightCard';
 import { PillButton } from '../../../components/PillButton';
@@ -44,6 +44,25 @@ export default function TripDetailScreen() {
 
   if (!trip) {
     return <SafeAreaView className="flex-1 bg-bg" />;
+  }
+
+  function confirmDelete() {
+    if (!trip) return;
+    Alert.alert('Delete trip?', `"${trip.title}" will be permanently deleted.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('trips').delete().eq('id', id);
+          if (error) {
+            Alert.alert('Could not delete trip', error.message);
+            return;
+          }
+          router.replace('/');
+        },
+      },
+    ]);
   }
 
   const placesByCategory: Record<PlaceCategory, Place[]> = {
@@ -96,6 +115,7 @@ export default function TripDetailScreen() {
             <PillButton label="+ Place" onPress={() => router.push(`/trip/${id}/add-place`)} variant="glass" />
             <PillButton label="+ Flight" onPress={() => router.push(`/trip/${id}/add-flight`)} variant="glass" />
             <PillButton label="Map" onPress={() => router.push(`/trip/${id}/map`)} variant="glass" />
+            <PillButton label="Delete" onPress={confirmDelete} variant="ghost" />
           </View>
 
           {trip.tiktok_url ? (
