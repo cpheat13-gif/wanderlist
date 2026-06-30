@@ -1,9 +1,8 @@
 import { Pressable, Text, View } from 'react-native';
 
-export type DestinationTab = 'list' | 'explorer' | 'flights' | 'chat';
+export type DestinationTab = 'explorer' | 'flights' | 'chat';
 
 const TABS: { key: DestinationTab; label: string; glyph: string }[] = [
-  { key: 'list', label: 'My List', glyph: '≡' },
   { key: 'explorer', label: 'Explore', glyph: '⊙' },
   { key: 'flights', label: 'Flights', glyph: '✈︎' },
   { key: 'chat', label: 'Chat', glyph: '✉' },

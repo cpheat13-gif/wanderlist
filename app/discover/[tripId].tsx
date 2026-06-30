@@ -7,7 +7,6 @@ import { DestinationTab, DestinationTabBar } from '../../components/discover/Des
 import { ExplorerTab } from '../../components/discover/ExplorerTab';
 import { FlightsTab } from '../../components/discover/FlightsTab';
 import { ChatTab } from '../../components/discover/ChatTab';
-import { MyListTab } from '../../components/discover/MyListTab';
 import { supabase } from '../../lib/supabase';
 import { Place, Trip } from '../../lib/types';
 
@@ -48,6 +47,10 @@ export default function DestinationScreen() {
     }, [tripId])
   );
 
+  function handlePlaceAdded(place: Place) {
+    setPlaces((prev) => [...prev, place]);
+  }
+
   function handlePlaceUpdate(updated: Place) {
     setPlaces((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
@@ -68,16 +71,15 @@ export default function DestinationScreen() {
       </View>
 
       <View className="flex-1">
-        {activeTab === 'list' ? (
-          <MyListTab places={places} onPlaceUpdate={handlePlaceUpdate} />
-        ) : null}
         {activeTab === 'explorer' ? (
           <ExplorerTab
             tripId={trip.id}
             destination={name}
             country={country}
             coverPhotoUrl={trip.cover_photo_url}
-            onPlaceAdded={(place) => setPlaces((prev) => [...prev, place])}
+            places={places}
+            onPlaceAdded={handlePlaceAdded}
+            onPlaceUpdate={handlePlaceUpdate}
           />
         ) : null}
         {activeTab === 'flights' ? <FlightsTab tripId={trip.id} destination={name} country={country} /> : null}
