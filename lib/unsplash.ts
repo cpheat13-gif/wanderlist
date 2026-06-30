@@ -29,3 +29,27 @@ export async function fetchDestinationPhoto(query: string): Promise<DestinationP
     photographerUrl: `${photo.user.links.html}?utm_source=wanderlist&utm_medium=referral`,
   };
 }
+
+// Like fetchDestinationPhoto, but returns several results for a gallery view.
+export async function fetchDestinationPhotos(query: string, count = 4): Promise<DestinationPhoto[]> {
+  const trimmed = query.trim();
+  if (!ACCESS_KEY || !trimmed) return [];
+
+  const res = await fetch(
+    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(trimmed)}&orientation=landscape&per_page=${count}`,
+    { headers: { Authorization: `Client-ID ${ACCESS_KEY}` } }
+  );
+  if (!res.ok) return [];
+
+  const json = await res.json();
+  const results = (json.results ?? []) as Array<{
+    urls: { raw: string };
+    user: { name: string; links: { html: string } };
+  }>;
+
+  return results.map((photo) => ({
+    url: `${photo.urls.raw}&w=1600&q=80&fm=jpg&fit=crop`,
+    photographerName: photo.user.name,
+    photographerUrl: `${photo.user.links.html}?utm_source=wanderlist&utm_medium=referral`,
+  }));
+}
