@@ -32,6 +32,13 @@ export interface Place {
   created_at: string;
 }
 
+export interface TiktokLink {
+  id: string;
+  trip_id: string;
+  url: string;
+  created_at: string;
+}
+
 export interface Flight {
   id: string;
   trip_id: string;

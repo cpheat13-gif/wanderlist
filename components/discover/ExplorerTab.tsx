@@ -9,7 +9,7 @@ import { colorForCategory } from '../../theme/colors';
 import { exploreDestination, ExploreResult } from '../../lib/ai';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
-import { Place, PlaceCategory } from '../../lib/types';
+import { Place, PlaceCategory, TiktokLink } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.46);
@@ -90,6 +90,41 @@ export function ExplorerTab({
   const [heroThumbs, setHeroThumbs] = useState<(string | null)[]>([null, null, null]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [tiktokLinks, setTiktokLinks] = useState<TiktokLink[]>([]);
+  const [linkInput, setLinkInput] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [savingLink, setSavingLink] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('tiktok_links')
+      .select('*')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setTiktokLinks(data ?? []));
+  }, [tripId]);
+
+  async function handleSaveLink() {
+    const url = linkInput.trim();
+    if (!url || savingLink) return;
+    setSavingLink(true);
+    const { data, error } = await supabase
+      .from('tiktok_links')
+      .insert({ trip_id: tripId, url })
+      .select()
+      .single();
+    if (!error && data) {
+      setTiktokLinks((prev) => [...prev, data as TiktokLink]);
+      setLinkInput('');
+      setShowLinkInput(false);
+    }
+    setSavingLink(false);
+  }
+
+  async function handleDeleteLink(id: string) {
+    setTiktokLinks((prev) => prev.filter((l) => l.id !== id));
+    await supabase.from('tiktok_links').delete().eq('id', id);
+  }
 
   function toggleExpanded(key: string) {
     setExpandedKeys((prev) => {
@@ -313,36 +348,133 @@ export function ExplorerTab({
       </View>
 
       {/* ── TikTok ── */}
-      <Pressable
-        onPress={() => WebBrowser.openBrowserAsync(`https://www.tiktok.com/search?q=${encodeURIComponent(destination + ' travel')}`)}
-        style={{
-          marginHorizontal: 12,
-          marginTop: 12,
-          borderRadius: 18,
-          overflow: 'hidden',
-          backgroundColor: '#000',
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.18,
-          shadowRadius: 8,
-          elevation: 4,
-        }}
-      >
-        <Text style={{ fontSize: 26, marginRight: 14 }}>♪</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
-            {destination} on TikTok
+      <View style={{ marginHorizontal: 12, marginTop: 12 }}>
+        {/* Discover button */}
+        <Pressable
+          onPress={() => WebBrowser.openBrowserAsync(`https://www.tiktok.com/search?q=${encodeURIComponent(destination + ' travel')}`)}
+          style={{
+            borderRadius: 18,
+            backgroundColor: '#000',
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.18,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <Text style={{ fontSize: 26, marginRight: 14 }}>♪</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+              {destination} on TikTok
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 }}>
+              Discover travel videos & tips
+            </Text>
+          </View>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 22 }}>›</Text>
+        </Pressable>
+
+        {/* Saved links */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 10 }}>
+          <Text style={{ flex: 1, color: '#9CA3AF', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+            My TikTok Links
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 }}>
-            Travel videos, tips & hidden gems
-          </Text>
+          <Pressable onPress={() => setShowLinkInput((v) => !v)}>
+            <Text style={{ color: '#059669', fontSize: 13, fontWeight: '600' }}>
+              {showLinkInput ? 'Cancel' : '+ Add link'}
+            </Text>
+          </Pressable>
         </View>
-        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 22 }}>›</Text>
-      </Pressable>
+
+        {showLinkInput ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 }}>
+            <TextInput
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 11,
+                color: '#111',
+                fontSize: 13,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.07,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+              placeholder="Paste TikTok link..."
+              placeholderTextColor="#9CA3AF"
+              value={linkInput}
+              onChangeText={setLinkInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              onSubmitEditing={handleSaveLink}
+            />
+            <Pressable
+              onPress={handleSaveLink}
+              disabled={!linkInput.trim() || savingLink}
+              style={{
+                backgroundColor: '#059669',
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 11,
+                opacity: !linkInput.trim() || savingLink ? 0.45 : 1,
+              }}
+            >
+              <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>Save</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {tiktokLinks.length === 0 && !showLinkInput ? (
+          <Text style={{ color: '#C4C4C4', fontSize: 13, marginBottom: 4 }}>
+            No links saved yet — paste a TikTok URL to save it here.
+          </Text>
+        ) : null}
+
+        {tiktokLinks.map((link) => {
+          let display = link.url;
+          try { display = decodeURIComponent(new URL(link.url).pathname.replace(/^\//, '')); } catch {}
+          return (
+            <View
+              key={link.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: 'white',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                marginBottom: 8,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.07,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              <Text style={{ fontSize: 16, marginRight: 10 }}>♪</Text>
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => WebBrowser.openBrowserAsync(link.url)}
+              >
+                <Text style={{ color: '#111', fontSize: 13 }} numberOfLines={1}>
+                  {display}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8} style={{ paddingLeft: 12 }}>
+                <Text style={{ color: '#D1D5DB', fontSize: 16 }}>✕</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
 
       {/* ── Category tabs ── */}
       <ScrollView
