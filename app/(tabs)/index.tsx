@@ -81,7 +81,7 @@ export default function PlanningScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
         <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
-          {'Discover\nNew Destination'}
+          {'My\nTrips'}
         </Text>
       </View>
 
