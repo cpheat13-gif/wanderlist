@@ -5,6 +5,7 @@ import { Trip } from '../lib/types';
 
 const STATUS_LABEL: Record<Trip['status'], string> = {
   idea: 'IDEA',
+  planning: 'PLANNING',
   booked: 'BOOKED',
   past: 'PAST',
 };

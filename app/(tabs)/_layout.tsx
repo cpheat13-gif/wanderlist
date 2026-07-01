@@ -14,7 +14,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="discover"
         options={{
-          title: 'New Trip',
+          title: 'Bucket List',
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✦</Text>,
         }}
       />
@@ -33,10 +33,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="past"
+        options={{
+          title: 'Past',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◉</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◎</Text>,
+          href: null,
         }}
       />
     </Tabs>

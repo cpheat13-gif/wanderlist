@@ -8,7 +8,7 @@ import { ExplorerTab } from '../../components/discover/ExplorerTab';
 import { FlightsTab } from '../../components/discover/FlightsTab';
 import { ChatTab } from '../../components/discover/ChatTab';
 import { supabase } from '../../lib/supabase';
-import { Place, Trip } from '../../lib/types';
+import { Place, Trip, TripStatus } from '../../lib/types';
 
 function parseDestination(destination: string | null): { name: string; country?: string } {
   if (!destination) return { name: 'this trip' };
@@ -85,6 +85,12 @@ export default function DestinationScreen() {
     }
   }
 
+  async function handleStatusChange(status: TripStatus) {
+    if (!trip) return;
+    setTrip((prev) => (prev ? { ...prev, status } : null));
+    await supabase.from('trips').update({ status }).eq('id', trip.id);
+  }
+
   function handlePlaceAdded(place: Place) {
     setPlaces((prev) => [...prev, place]);
   }
@@ -118,6 +124,8 @@ export default function DestinationScreen() {
             onPlaceAdded={handlePlaceAdded}
             onPlaceUpdate={handlePlaceUpdate}
             onDeleteTrip={handleDeleteTrip}
+            tripStatus={trip.status}
+            onStatusChange={handleStatusChange}
           />
         ) : null}
         {activeTab === 'flights' ? <FlightsTab tripId={trip.id} destination={name} country={country} /> : null}

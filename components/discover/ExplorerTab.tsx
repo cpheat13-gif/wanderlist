@@ -10,7 +10,7 @@ import { colorForCategory } from '../../theme/colors';
 import { exploreDestination, ExploreResult } from '../../lib/ai';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
-import { Place, PlaceCategory, TiktokLink } from '../../lib/types';
+import { Place, PlaceCategory, TiktokLink, TripStatus } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PHOTO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.48);
@@ -67,6 +67,8 @@ export function ExplorerTab({
   onPlaceAdded,
   onPlaceUpdate,
   onDeleteTrip,
+  tripStatus,
+  onStatusChange,
 }: {
   tripId: string;
   destination: string;
@@ -78,6 +80,8 @@ export function ExplorerTab({
   onPlaceAdded?: (place: Place) => void;
   onPlaceUpdate?: (place: Place) => void;
   onDeleteTrip?: () => void;
+  tripStatus?: TripStatus;
+  onStatusChange?: (status: TripStatus) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<PlaceCategory>('hotel');
@@ -388,6 +392,29 @@ export function ExplorerTab({
               </View>
             ))}
           </View>
+
+          {/* ── Move to Planning ── */}
+          {tripStatus === 'idea' && onStatusChange ? (
+            <Pressable
+              onPress={() => onStatusChange('planning')}
+              style={{
+                marginHorizontal: 16,
+                marginBottom: 16,
+                backgroundColor: '#059669',
+                borderRadius: 18,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 16,
+                gap: 8,
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 16 }}>◷</Text>
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                Move to Planning
+              </Text>
+            </Pressable>
+          ) : null}
 
           {/* ── TikTok ── */}
           <View style={{ marginHorizontal: 16, marginTop: 4 }}>

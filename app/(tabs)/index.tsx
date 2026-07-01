@@ -10,26 +10,20 @@ import { Place, Trip } from '../../lib/types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 32 - 12) / 2);
 
-const FILTER_PILLS = [
-  { key: 'all' as const, label: 'All' },
-  { key: 'idea' as const, label: 'Planning' },
-  { key: 'booked' as const, label: 'Booked' },
-  { key: 'past' as const, label: 'Past' },
-];
-
-type FilterKey = 'all' | 'idea' | 'booked' | 'past';
-
 export default function PlanningScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [placeCountByTrip, setPlaceCountByTrip] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterKey>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: tripsData } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
+    const { data: tripsData } = await supabase
+      .from('trips')
+      .select('*')
+      .eq('status', 'planning')
+      .order('created_at', { ascending: false });
     const allTrips = tripsData ?? [];
     setTrips(allTrips);
 
@@ -69,24 +63,23 @@ export default function PlanningScreen() {
 
   const filtered = trips.filter((t) => {
     const q = search.toLowerCase().trim();
-    const matchesSearch =
+    return (
       !q ||
       t.title.toLowerCase().includes(q) ||
-      (t.destination?.toLowerCase().includes(q) ?? false);
-    const matchesFilter = filter === 'all' || t.status === filter;
-    return matchesSearch && matchesFilter;
+      (t.destination?.toLowerCase().includes(q) ?? false)
+    );
   });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
         <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
-          {'My\nTrips'}
+          Planning
         </Text>
       </View>
 
       {/* Search row */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10, gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14, gap: 10 }}>
         <View
           style={{
             flex: 1,
@@ -101,7 +94,7 @@ export default function PlanningScreen() {
           <Text style={{ color: '#9CA3AF', fontSize: 15, marginRight: 8 }}>🔍</Text>
           <TextInput
             style={{ flex: 1, color: '#111', fontSize: 14 }}
-            placeholder="Search destinations..."
+            placeholder="Search trips..."
             placeholderTextColor="#9CA3AF"
             value={search}
             onChangeText={setSearch}
@@ -114,40 +107,6 @@ export default function PlanningScreen() {
         </View>
       </View>
 
-      {/* Filter pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 14 }}
-      >
-        {FILTER_PILLS.map((pill) => {
-          const isActive = filter === pill.key;
-          return (
-            <Pressable
-              key={pill.key}
-              onPress={() => setFilter(pill.key)}
-              style={{
-                paddingHorizontal: 18,
-                paddingVertical: 8,
-                borderRadius: 100,
-                backgroundColor: isActive ? '#111' : '#F3F4F6',
-              }}
-            >
-              <Text
-                style={{
-                  color: isActive ? 'white' : '#6B7280',
-                  fontWeight: isActive ? '700' : '500',
-                  fontSize: 14,
-                }}
-              >
-                {pill.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
@@ -157,7 +116,7 @@ export default function PlanningScreen() {
           <View style={{ alignItems: 'center', marginTop: 60 }}>
             <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
               {trips.length === 0
-                ? 'No trips yet — start one from New Trip.'
+                ? 'No trips in planning yet — move a trip here from the Explorer.'
                 : 'No trips match your search.'}
             </Text>
           </View>

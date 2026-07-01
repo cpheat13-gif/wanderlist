@@ -1,4 +1,4 @@
-export type TripStatus = 'idea' | 'booked' | 'past';
+export type TripStatus = 'idea' | 'planning' | 'booked' | 'past';
 
 export type PlaceCategory = 'hotel' | 'restaurant' | 'activity' | 'sightseeing';
 
