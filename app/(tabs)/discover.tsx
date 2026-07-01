@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -214,6 +214,9 @@ export default function BucketListScreen() {
   const [adding, setAdding] = useState(false);
   const [myTrips, setMyTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(false);
+  const [searchPhoto, setSearchPhoto] = useState<string | null>(null);
+  const [searchPhotoLoading, setSearchPhotoLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -229,6 +232,26 @@ export default function BucketListScreen() {
       });
     });
   }, []);
+
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchPhoto(null);
+      setSearchPhotoLoading(false);
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      return;
+    }
+    setSearchPhotoLoading(true);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      const photo = await fetchDestinationPhoto(`${q} travel landscape`);
+      setSearchPhoto(photo?.url ?? null);
+      setSearchPhotoLoading(false);
+    }, 500);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [search]);
 
   const loadMyTrips = useCallback(async () => {
     if (!session) return;
@@ -272,7 +295,7 @@ export default function BucketListScreen() {
           created_by: session.user.id,
           title: selectedDest.name,
           destination: `${selectedDest.name}, ${selectedDest.location}`,
-          cover_photo_url: photos[selectedDest.name] ?? null,
+          cover_photo_url: photos[selectedDest.name] ?? searchPhoto ?? null,
           status: 'idea',
         })
         .select()
@@ -402,19 +425,98 @@ export default function BucketListScreen() {
             marginBottom: 28,
           }}
         >
-          {filtered.length === 0 ? (
-            <Text
+          {/* Custom search card — always shown when user has typed something */}
+          {search.trim() ? (
+            <Pressable
+              onPress={() =>
+                setSelectedDest({
+                  name: search.trim(),
+                  location: '',
+                  category: 'all' as CategoryKey,
+                  photoQuery: `${search.trim()} travel landscape`,
+                  description:
+                    'Add this destination to your bucket list and start exploring hotels, restaurants, activities, and sightseeing spots.',
+                  rating: '—',
+                  bestTime: '—',
+                  days: '—',
+                })
+              }
               style={{
-                color: '#9CA3AF',
-                fontSize: 14,
-                textAlign: 'center',
-                marginTop: 28,
                 width: '100%',
-                lineHeight: 22,
+                height: 100,
+                borderRadius: 20,
+                overflow: 'hidden',
+                backgroundColor: '#1C1C2E',
               }}
             >
-              No destinations found — try a different filter.
-            </Text>
+              {searchPhoto ? (
+                <Image
+                  source={{ uri: searchPhoto }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  transition={300}
+                />
+              ) : searchPhotoLoading ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color="rgba(255,255,255,0.5)" />
+                </View>
+              ) : null}
+              <LinearGradient
+                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.72)']}
+                locations={[0, 1]}
+                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 }}
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  padding: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View>
+                  <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 3 }}>
+                    Add destination
+                  </Text>
+                  <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>
+                    {search.trim()}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#059669',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: 'white', fontSize: 20, lineHeight: 24 }}>+</Text>
+                </View>
+              </View>
+            </Pressable>
+          ) : null}
+
+          {filtered.length === 0 ? (
+            !search.trim() ? (
+              <Text
+                style={{
+                  color: '#9CA3AF',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  marginTop: 28,
+                  width: '100%',
+                  lineHeight: 22,
+                }}
+              >
+                No destinations found — try a different filter.
+              </Text>
+            ) : null
           ) : (
             filtered.map((dest) => (
               <Pressable
@@ -572,7 +674,7 @@ export default function BucketListScreen() {
       {/* Destination preview modal */}
       <DestinationPreview
         dest={selectedDest}
-        photoUrl={selectedDest ? (photos[selectedDest.name] ?? null) : null}
+        photoUrl={selectedDest ? (photos[selectedDest.name] ?? searchPhoto ?? null) : null}
         visible={!!selectedDest}
         onClose={() => setSelectedDest(null)}
         onAdd={handleAddToBucketList}
