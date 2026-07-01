@@ -81,6 +81,7 @@ export interface ExploreResult {
   category: PlaceCategory;
   photoQuery: string;
   blurb: string;
+  website?: string;
 }
 
 export interface ExploreResponse {

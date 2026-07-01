@@ -97,14 +97,10 @@ export function ExplorerTab({
   }
 
   function getPlaceLink(result: ExploreResult): { label: string; url: string } | null {
-    const q = encodeURIComponent(`${result.name} ${destination}`);
-    if (result.category === 'hotel') {
-      return { label: 'Booking.com', url: `https://www.booking.com/search.html?ss=${q}` };
-    }
-    if (result.category === 'restaurant') {
-      return { label: 'Google Maps', url: `https://www.google.com/maps/search/${q}` };
-    }
-    return null;
+    if (result.category !== 'hotel' && result.category !== 'restaurant') return null;
+    if (result.website) return { label: 'Official Website', url: result.website };
+    const q = encodeURIComponent(`${result.name} ${destination} official website`);
+    return { label: 'Search Online', url: `https://www.google.com/search?q=${q}` };
   }
 
   const activeTab = CATEGORY_TABS.find((t) => t.key === activeCategory)!;

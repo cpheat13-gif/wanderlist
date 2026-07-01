@@ -100,6 +100,7 @@ const EXPLORE_DESTINATION_TOOL = {
             category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
             photoQuery: { type: 'string', description: "2-4 word photo search query, e.g. 'Cusco hotel courtyard'." },
             blurb: { type: 'string', description: '1 sentence on what it is / why it fits the search.' },
+            website: { type: 'string', description: "Official website URL for hotels and restaurants only, when you are confident it exists (e.g. 'https://www.fourseasons.com/tokyo'). Omit entirely if unsure — never guess a URL." },
           },
           required: ['name', 'category', 'photoQuery', 'blurb'],
         },
