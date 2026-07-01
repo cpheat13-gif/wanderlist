@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -308,6 +309,38 @@ export function ExplorerTab({
           </View>
         ))}
       </View>
+
+      {/* ── TikTok ── */}
+      <Pressable
+        onPress={() => WebBrowser.openBrowserAsync(`https://www.tiktok.com/search?q=${encodeURIComponent(destination + ' travel')}`)}
+        style={{
+          marginHorizontal: 12,
+          marginTop: 12,
+          borderRadius: 18,
+          overflow: 'hidden',
+          backgroundColor: '#000',
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.18,
+          shadowRadius: 8,
+          elevation: 4,
+        }}
+      >
+        <Text style={{ fontSize: 26, marginRight: 14 }}>♪</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+            {destination} on TikTok
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 }}>
+            Travel videos, tips & hidden gems
+          </Text>
+        </View>
+        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 22 }}>›</Text>
+      </Pressable>
 
       {/* ── Category tabs ── */}
       <ScrollView
