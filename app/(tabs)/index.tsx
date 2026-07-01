@@ -1,18 +1,31 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Dimensions, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SectionLabel } from '../../components/SectionLabel';
 import { supabase } from '../../lib/supabase';
 import { Place, Trip } from '../../lib/types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 32 - 12) / 2);
+
+const FILTER_PILLS = [
+  { key: 'all' as const, label: 'All' },
+  { key: 'idea' as const, label: 'Planning' },
+  { key: 'booked' as const, label: 'Booked' },
+  { key: 'past' as const, label: 'Past' },
+];
+
+type FilterKey = 'all' | 'idea' | 'booked' | 'past';
 
 export default function PlanningScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [placeCountByTrip, setPlaceCountByTrip] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,11 +57,7 @@ export default function PlanningScreen() {
 
   async function handleDelete(trip: Trip) {
     setTrips((prev) => prev.filter((t) => t.id !== trip.id));
-    const { error } = await supabase.from('trips').delete().eq('id', trip.id);
-    if (error) {
-      Alert.alert('Could not delete trip', error.message);
-      load();
-    }
+    await supabase.from('trips').delete().eq('id', trip.id);
   }
 
   function confirmDelete(trip: Trip) {
@@ -58,71 +67,165 @@ export default function PlanningScreen() {
     ]);
   }
 
+  const filtered = trips.filter((t) => {
+    const q = search.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      t.title.toLowerCase().includes(q) ||
+      (t.destination?.toLowerCase().includes(q) ?? false);
+    const matchesFilter = filter === 'all' || t.status === filter;
+    return matchesSearch && matchesFilter;
+  });
+
   return (
-    <SafeAreaView className="flex-1 bg-bg">
-      <View className="px-5 pt-4 pb-3">
-        <SectionLabel>Planning</SectionLabel>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
+        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
+          {'Discover\nNew Destination'}
+        </Text>
       </View>
 
+      {/* Search row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10, gap: 10 }}>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#F3F4F6',
+            borderRadius: 100,
+            paddingHorizontal: 16,
+            height: 46,
+          }}
+        >
+          <Text style={{ color: '#9CA3AF', fontSize: 15, marginRight: 8 }}>🔍</Text>
+          <TextInput
+            style={{ flex: 1, color: '#111', fontSize: 14 }}
+            placeholder="Search destinations..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 ? (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <Text style={{ color: '#9CA3AF', fontSize: 15 }}>✕</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      {/* Filter pills */}
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#D4A857" />}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 14 }}
       >
-        {!loading && trips.length === 0 ? (
-          <View className="items-center mt-20">
-            <Text className="text-textMuted text-base text-center">
-              No trips yet — start one from New Trip.
+        {FILTER_PILLS.map((pill) => {
+          const isActive = filter === pill.key;
+          return (
+            <Pressable
+              key={pill.key}
+              onPress={() => setFilter(pill.key)}
+              style={{
+                paddingHorizontal: 18,
+                paddingVertical: 8,
+                borderRadius: 100,
+                backgroundColor: isActive ? '#111' : '#F3F4F6',
+              }}
+            >
+              <Text
+                style={{
+                  color: isActive ? 'white' : '#6B7280',
+                  fontWeight: isActive ? '700' : '500',
+                  fontSize: 14,
+                }}
+              >
+                {pill.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
+      >
+        {!loading && filtered.length === 0 ? (
+          <View style={{ alignItems: 'center', marginTop: 60 }}>
+            <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
+              {trips.length === 0
+                ? 'No trips yet — start one from New Trip.'
+                : 'No trips match your search.'}
             </Text>
           </View>
         ) : null}
 
-        {trips.map((trip) => {
-          const count = placeCountByTrip[trip.id] ?? 0;
-          return (
-            <Pressable
-              key={trip.id}
-              onPress={() => router.push(`/discover/${trip.id}`)}
-              onLongPress={() => confirmDelete(trip)}
-              className="mb-4 rounded-2xl overflow-hidden"
-              style={{ height: 200 }}
-            >
-              {trip.cover_photo_url ? (
-                <Image
-                  source={{ uri: trip.cover_photo_url }}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="cover"
+        {/* 2-column grid */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {filtered.map((trip) => {
+            const count = placeCountByTrip[trip.id] ?? 0;
+            return (
+              <Pressable
+                key={trip.id}
+                onPress={() => router.push(`/discover/${trip.id}`)}
+                onLongPress={() => confirmDelete(trip)}
+                style={{ width: CARD_WIDTH, height: 200, borderRadius: 20, overflow: 'hidden' }}
+              >
+                {trip.cover_photo_url ? (
+                  <Image
+                    source={{ uri: trip.cover_photo_url }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={{ flex: 1, backgroundColor: '#E5E7EB' }} />
+                )}
+
+                <LinearGradient
+                  colors={['transparent', 'rgba(11,11,14,0.72)', 'rgba(11,11,14,0.96)']}
+                  locations={[0.3, 0.65, 1]}
+                  style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
                 />
-              ) : (
-                <View className="flex-1 bg-surface" />
-              )}
 
-              <LinearGradient
-                colors={['transparent', 'rgba(11,11,14,0.65)', 'rgba(11,11,14,0.95)']}
-                locations={[0.3, 0.65, 1]}
-                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
-              />
-
-<View className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex-row items-end justify-between">
-                <View className="flex-1 mr-3">
-                  <Text className="text-white text-xl font-bold" numberOfLines={1}>
+                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
+                  <Text
+                    style={{ color: 'white', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 }}
+                    numberOfLines={1}
+                  >
                     {trip.title}
                   </Text>
                   {trip.destination && trip.destination !== trip.title ? (
-                    <Text className="text-white/60 text-sm mt-0.5" numberOfLines={1}>
+                    <Text
+                      style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}
+                      numberOfLines={1}
+                    >
                       {trip.destination}
                     </Text>
                   ) : null}
+                  {count > 0 ? (
+                    <View
+                      style={{
+                        marginTop: 5,
+                        alignSelf: 'flex-start',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        borderRadius: 100,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 10, fontWeight: '600' }}>
+                        {count} {count === 1 ? 'place' : 'places'}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-                {count > 0 ? (
-                  <View className="bg-white/20 rounded-full px-3 py-1">
-                    <Text className="text-white text-xs font-semibold">{count} {count === 1 ? 'place' : 'places'}</Text>
-                  </View>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+              </Pressable>
+            );
+          })}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
