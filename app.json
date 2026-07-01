@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "wanderlist",
+    "slug": "wanderlist",
+    "scheme": "wanderlist",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wanderlist.app"
+    },
+    "android": {
+      "package": "com.wanderlist.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0E",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
