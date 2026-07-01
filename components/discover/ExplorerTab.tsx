@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+// eslint-disable-next-line deprecation/deprecation
+import { ActivityIndicator, Clipboard, Dimensions, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -94,6 +95,7 @@ export function ExplorerTab({
   const [linkInput, setLinkInput] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [savingLink, setSavingLink] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -460,19 +462,21 @@ export function ExplorerTab({
               }}
             >
               <Text style={{ fontSize: 16, marginRight: 10 }}>♪</Text>
-              {/* editable={false} gives native iOS long-press → Copy menu */}
-              <TextInput
-                value={display}
-                editable={false}
-                style={{ flex: 1, color: '#111', fontSize: 13 }}
-                numberOfLines={1}
-              />
+              <Pressable style={{ flex: 1 }} onPress={() => WebBrowser.openBrowserAsync(link.url)}>
+                <Text style={{ color: '#111', fontSize: 13 }} numberOfLines={1}>{display}</Text>
+              </Pressable>
               <Pressable
-                onPress={() => WebBrowser.openBrowserAsync(link.url)}
                 hitSlop={8}
                 style={{ paddingHorizontal: 10 }}
+                onPress={() => {
+                  Clipboard.setString(link.url); // eslint-disable-line deprecation/deprecation
+                  setCopiedId(link.id);
+                  setTimeout(() => setCopiedId(null), 1500);
+                }}
               >
-                <Text style={{ color: '#059669', fontSize: 12, fontWeight: '600' }}>Open</Text>
+                <Text style={{ color: copiedId === link.id ? '#059669' : '#9CA3AF', fontSize: 12, fontWeight: '600' }}>
+                  {copiedId === link.id ? 'Copied!' : 'Copy'}
+                </Text>
               </Pressable>
               <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8}>
                 <Text style={{ color: '#D1D5DB', fontSize: 16 }}>✕</Text>
