@@ -85,6 +85,7 @@ export function ExplorerTab({
   const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
   const [addingKey, setAddingKey] = useState<string | null>(null);
   const [heroThumbs, setHeroThumbs] = useState<(string | null)[]>([null, null, null]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const activeTab = CATEGORY_TABS.find((t) => t.key === activeCategory)!;
   const categoryPlaces = places.filter((p) => p.category === activeCategory);
@@ -185,13 +186,16 @@ export function ExplorerTab({
             elevation: 10,
           }}
         >
-          {coverPhotoUrl ? (
-            <Image source={{ uri: coverPhotoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-          ) : (
-            <View style={{ flex: 1, backgroundColor: '#1C1C2E', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#444', fontSize: 52 }}>⊙</Text>
-            </View>
-          )}
+          {(() => {
+            const displayUrl = activePhotoIndex === 0 ? coverPhotoUrl : heroThumbs[activePhotoIndex - 1];
+            return displayUrl ? (
+              <Image source={{ uri: displayUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <View style={{ flex: 1, backgroundColor: '#1C1C2E', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#444', fontSize: 52 }}>⊙</Text>
+              </View>
+            );
+          })()}
 
           {/* Gradient — bottom 60% darkens */}
           <LinearGradient
@@ -200,25 +204,28 @@ export function ExplorerTab({
             style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' }}
           />
 
-          {/* Thumbnail column — right side */}
-          <View style={{ position: 'absolute', right: 14, top: 14, gap: 10 }}>
-            {heroThumbs.map((url, i) => (
-              <View
+          {/* Thumbnail column — right side (cover + 3 fetched photos) */}
+          <View style={{ position: 'absolute', right: 14, top: 14, gap: 8 }}>
+            {[coverPhotoUrl, ...heroThumbs].map((url, i) => (
+              <Pressable
                 key={i}
+                onPress={() => setActivePhotoIndex(i)}
                 style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 18,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 16,
                   overflow: 'hidden',
                   borderWidth: 3,
-                  borderColor: 'white',
+                  borderColor: activePhotoIndex === i ? '#059669' : 'white',
                   backgroundColor: 'rgba(255,255,255,0.15)',
                 }}
               >
                 {url ? (
                   <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                ) : null}
-              </View>
+                ) : (
+                  <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                )}
+              </Pressable>
             ))}
           </View>
 

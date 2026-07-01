@@ -31,6 +31,14 @@ function SecondaryHeader({ title, onBack }: { title: string; onBack: () => void 
 export default function DestinationScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
+
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [router]);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [flightCount, setFlightCount] = useState(0);
@@ -84,7 +92,7 @@ export default function DestinationScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#F2F2F4' }}>
       {activeTab !== 'explorer' ? (
-        <SecondaryHeader title={trip.title} onBack={() => router.back()} />
+        <SecondaryHeader title={trip.title} onBack={handleBack} />
       ) : null}
 
       <View style={{ flex: 1 }}>
@@ -96,7 +104,7 @@ export default function DestinationScreen() {
             coverPhotoUrl={trip.cover_photo_url}
             places={places}
             flightCount={flightCount}
-            onBack={() => router.back()}
+            onBack={handleBack}
             onPlaceAdded={handlePlaceAdded}
             onPlaceUpdate={handlePlaceUpdate}
           />
