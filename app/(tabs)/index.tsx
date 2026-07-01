@@ -103,26 +103,7 @@ export default function PlanningScreen() {
                 style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
               />
 
-              {/* Delete button — top-right corner */}
-              <Pressable
-                onPress={(e) => { e.stopPropagation(); confirmDelete(trip); }}
-                hitSlop={8}
-                style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(0,0,0,0.45)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>✕</Text>
-              </Pressable>
-
-              <View className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex-row items-end justify-between">
+<View className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex-row items-end justify-between">
                 <View className="flex-1 mr-3">
                   <Text className="text-white text-xl font-bold" numberOfLines={1}>
                     {trip.title}

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { DestinationTab, DestinationTabBar } from '../../components/discover/DestinationTabBar';
@@ -75,6 +75,25 @@ export default function DestinationScreen() {
     }, [tripId])
   );
 
+  function handleDeleteTrip() {
+    if (!trip) return;
+    Alert.alert('Remove trip?', `"${trip.title}" and all its places will be permanently deleted.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.from('trips').delete().eq('id', trip.id);
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)');
+          }
+        },
+      },
+    ]);
+  }
+
   function handlePlaceAdded(place: Place) {
     setPlaces((prev) => [...prev, place]);
   }
@@ -107,6 +126,7 @@ export default function DestinationScreen() {
             onBack={handleBack}
             onPlaceAdded={handlePlaceAdded}
             onPlaceUpdate={handlePlaceUpdate}
+            onDeleteTrip={handleDeleteTrip}
           />
         ) : null}
         {activeTab === 'flights' ? <FlightsTab tripId={trip.id} destination={name} country={country} /> : null}

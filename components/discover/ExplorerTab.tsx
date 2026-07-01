@@ -65,6 +65,7 @@ export function ExplorerTab({
   onBack,
   onPlaceAdded,
   onPlaceUpdate,
+  onDeleteTrip,
 }: {
   tripId: string;
   destination: string;
@@ -75,6 +76,7 @@ export function ExplorerTab({
   onBack?: () => void;
   onPlaceAdded?: (place: Place) => void;
   onPlaceUpdate?: (place: Place) => void;
+  onDeleteTrip?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<PlaceCategory>('hotel');
@@ -614,6 +616,16 @@ export function ExplorerTab({
           </Text>
         ) : null}
       </View>
+
+      {/* ── Remove trip ── */}
+      {onDeleteTrip ? (
+        <Pressable
+          onPress={onDeleteTrip}
+          style={{ marginHorizontal: 12, marginTop: 32, marginBottom: 8, alignItems: 'center', paddingVertical: 14 }}
+        >
+          <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '500' }}>Remove trip</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
