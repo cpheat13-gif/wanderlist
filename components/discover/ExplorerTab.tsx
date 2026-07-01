@@ -91,6 +91,7 @@ export function ExplorerTab({
   const [heroThumbs, setHeroThumbs] = useState<(string | null)[]>([null, null, null]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [tiktokLinks, setTiktokLinks] = useState<TiktokLink[]>([]);
   const [linkInput, setLinkInput] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -761,12 +762,31 @@ export function ExplorerTab({
 
       {/* ── Remove trip ── */}
       {onDeleteTrip ? (
-        <Pressable
-          onPress={onDeleteTrip}
-          style={{ marginHorizontal: 12, marginTop: 32, marginBottom: 8, alignItems: 'center', paddingVertical: 14 }}
-        >
-          <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '500' }}>Remove trip</Text>
-        </Pressable>
+        <View style={{ marginHorizontal: 12, marginTop: 32, marginBottom: 8, alignItems: 'center' }}>
+          {confirmDelete ? (
+            <View style={{ alignItems: 'center', gap: 12 }}>
+              <Text style={{ color: '#6B7280', fontSize: 13 }}>Remove this trip permanently?</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  onPress={() => setConfirmDelete(false)}
+                  style={{ paddingHorizontal: 22, paddingVertical: 10, borderRadius: 100, backgroundColor: '#F3F4F6' }}
+                >
+                  <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onDeleteTrip}
+                  style={{ paddingHorizontal: 22, paddingVertical: 10, borderRadius: 100, backgroundColor: '#EF4444' }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Remove</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => setConfirmDelete(true)} style={{ paddingVertical: 14 }}>
+              <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '500' }}>Remove trip</Text>
+            </Pressable>
+          )}
+        </View>
       ) : null}
     </ScrollView>
   );
