@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Pressable,
-  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -17,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { Trip } from '../../lib/types';
 import { DestinationPreview } from '../../components/discover/DestinationPreview';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -212,18 +210,14 @@ export default function BucketListScreen() {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
   const [adding, setAdding] = useState(false);
-  const [myTrips, setMyTrips] = useState<Trip[]>([]);
-  const [tripsLoading, setTripsLoading] = useState(false);
   const [searchPhoto, setSearchPhoto] = useState<string | null>(null);
   const [searchPhotoLoading, setSearchPhotoLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarStyle('dark');
-      return () => setStatusBarStyle('light');
-    }, [])
-  );
+  useFocusEffect(useCallback(() => {
+    setStatusBarStyle('dark');
+    return () => setStatusBarStyle('light');
+  }, []));
 
   useEffect(() => {
     [...CURATED, ...POPULAR].forEach((dest) => {
@@ -252,24 +246,6 @@ export default function BucketListScreen() {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
   }, [search]);
-
-  const loadMyTrips = useCallback(async () => {
-    if (!session) return;
-    setTripsLoading(true);
-    const { data } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('status', 'idea')
-      .order('created_at', { ascending: false });
-    setMyTrips(data ?? []);
-    setTripsLoading(false);
-  }, [session]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadMyTrips();
-    }, [loadMyTrips])
-  );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -411,9 +387,6 @@ export default function BucketListScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={tripsLoading} onRefresh={loadMyTrips} tintColor="#059669" />
-        }
       >
         {/* 2-column curated grid */}
         <View
@@ -615,60 +588,6 @@ export default function BucketListScreen() {
           </View>
         ) : null}
 
-        {/* My Bucket List */}
-        {myTrips.length > 0 ? (
-          <View style={{ paddingHorizontal: 16 }}>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 14 }}>
-              My Bucket List
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {myTrips.map((trip) => (
-                <Pressable
-                  key={trip.id}
-                  onPress={() => router.push(`/discover/${trip.id}`)}
-                  style={{
-                    width: CARD_WIDTH,
-                    height: 160,
-                    borderRadius: 20,
-                    overflow: 'hidden',
-                    backgroundColor: '#D1D5DB',
-                  }}
-                >
-                  {trip.cover_photo_url ? (
-                    <Image
-                      source={{ uri: trip.cover_photo_url }}
-                      style={{ width: '100%', height: '100%' }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={{ flex: 1, backgroundColor: '#E5E7EB' }} />
-                  )}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.95)']}
-                    locations={[0.3, 0.65, 1]}
-                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' }}
-                  />
-                  <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                    <Text
-                      style={{ color: 'white', fontSize: 14, fontWeight: '700' }}
-                      numberOfLines={1}
-                    >
-                      {trip.title}
-                    </Text>
-                    {trip.destination && trip.destination !== trip.title ? (
-                      <Text
-                        style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}
-                        numberOfLines={1}
-                      >
-                        {trip.destination}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
 
       {/* Destination preview modal */}

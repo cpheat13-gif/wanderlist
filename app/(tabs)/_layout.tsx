@@ -14,8 +14,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="discover"
         options={{
-          title: 'Bucket List',
+          title: 'Discover',
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✦</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="bucket"
+        options={{
+          title: 'Bucket List',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>♡</Text>,
         }}
       />
       <Tabs.Screen
