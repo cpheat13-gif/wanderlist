@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,6 +86,26 @@ export function ExplorerTab({
   const [addingKey, setAddingKey] = useState<string | null>(null);
   const [heroThumbs, setHeroThumbs] = useState<(string | null)[]>([null, null, null]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  function getPlaceLink(result: ExploreResult): { label: string; url: string } | null {
+    const q = encodeURIComponent(`${result.name} ${destination}`);
+    if (result.category === 'hotel') {
+      return { label: 'Booking.com', url: `https://www.booking.com/search.html?ss=${q}` };
+    }
+    if (result.category === 'restaurant') {
+      return { label: 'Google Maps', url: `https://www.google.com/maps/search/${q}` };
+    }
+    return null;
+  }
 
   const activeTab = CATEGORY_TABS.find((t) => t.key === activeCategory)!;
   const categoryPlaces = places.filter((p) => p.category === activeCategory);
@@ -481,6 +501,8 @@ export function ExplorerTab({
               const key = resultKey(result);
               const photo = photosByResult[key];
               const isAdded = addedKeys.has(key);
+              const isExpanded = expandedKeys.has(key);
+              const link = getPlaceLink(result);
               return (
                 <View
                   key={key}
@@ -497,29 +519,61 @@ export function ExplorerTab({
                     elevation: 3,
                   }}
                 >
-                  <View style={{ width: 110, height: 110, backgroundColor: '#F3F4F6' }}>
+                  {/* Photo — stretches with content when expanded */}
+                  <View style={{ width: 110, minHeight: 110, backgroundColor: '#F3F4F6' }}>
                     {photo ? (
                       <Image source={{ uri: photo.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     ) : (
-                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ flex: 1, minHeight: 110, alignItems: 'center', justifyContent: 'center' }}>
                         <ActivityIndicator color="#059669" />
                       </View>
                     )}
                   </View>
-                  <View style={{ flex: 1, padding: 14, justifyContent: 'center' }}>
+
+                  {/* Content */}
+                  <View style={{ flex: 1, padding: 14 }}>
                     <Text style={{ fontWeight: '600', color: '#111', fontSize: 15 }}>{result.name}</Text>
-                    <Text style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
+                    <Text
+                      style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4, lineHeight: 18 }}
+                      numberOfLines={isExpanded ? undefined : 2}
+                    >
                       {result.blurb}
                     </Text>
-                  </View>
-                  <View style={{ justifyContent: 'center', paddingRight: 12 }}>
-                    <PillButton
-                      label={isAdded ? 'Added' : '+ Add'}
-                      onPress={() => handleAdd(result)}
-                      variant={isAdded ? 'ghost' : 'solid'}
-                      loading={addingKey === key}
-                      disabled={isAdded}
-                    />
+
+                    {isExpanded ? (
+                      /* Expanded: link chip + Add button */
+                      <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        {link ? (
+                          <Pressable
+                            onPress={() => Linking.openURL(link.url)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: '#F0FDF4',
+                              borderRadius: 100,
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderWidth: 1,
+                              borderColor: '#059669',
+                            }}
+                          >
+                            <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>🔗 {link.label}</Text>
+                          </Pressable>
+                        ) : null}
+                        <PillButton
+                          label={isAdded ? 'Added' : '+ Add'}
+                          onPress={() => handleAdd(result)}
+                          variant={isAdded ? 'ghost' : 'solid'}
+                          loading={addingKey === key}
+                          disabled={isAdded}
+                        />
+                      </View>
+                    ) : (
+                      /* Collapsed: Explore more link */
+                      <Pressable onPress={() => toggleExpanded(key)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                        <Text style={{ color: '#059669', fontSize: 13, fontWeight: '600' }}>Explore more ›</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               );
