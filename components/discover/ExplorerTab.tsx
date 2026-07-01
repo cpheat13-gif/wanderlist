@@ -460,15 +460,21 @@ export function ExplorerTab({
               }}
             >
               <Text style={{ fontSize: 16, marginRight: 10 }}>♪</Text>
+              {/* editable={false} gives native iOS long-press → Copy menu */}
+              <TextInput
+                value={display}
+                editable={false}
+                style={{ flex: 1, color: '#111', fontSize: 13 }}
+                numberOfLines={1}
+              />
               <Pressable
-                style={{ flex: 1 }}
                 onPress={() => WebBrowser.openBrowserAsync(link.url)}
+                hitSlop={8}
+                style={{ paddingHorizontal: 10 }}
               >
-                <Text style={{ color: '#111', fontSize: 13 }} numberOfLines={1}>
-                  {display}
-                </Text>
+                <Text style={{ color: '#059669', fontSize: 12, fontWeight: '600' }}>Open</Text>
               </Pressable>
-              <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8} style={{ paddingLeft: 12 }}>
+              <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8}>
                 <Text style={{ color: '#D1D5DB', fontSize: 16 }}>✕</Text>
               </Pressable>
             </View>
