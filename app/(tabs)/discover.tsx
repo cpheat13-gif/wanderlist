@@ -288,9 +288,12 @@ export default function BucketListScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Title */}
-      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
-          {'Discover\nNew Destination'}
+      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 12 }}>
+        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', letterSpacing: -0.5 }}>
+          Discover
+        </Text>
+        <Text style={{ fontSize: 15, color: '#9CA3AF', marginTop: 4 }}>
+          Where do you want to go next?
         </Text>
       </View>
 
@@ -324,22 +327,10 @@ export default function BucketListScreen() {
             onChangeText={setSearch}
           />
           {search.length > 0 ? (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+            <Pressable onPress={() => setSearch('')} hitSlop={12}>
               <Text style={{ color: '#9CA3AF', fontSize: 15 }}>✕</Text>
             </Pressable>
           ) : null}
-        </View>
-        <View
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 23,
-            backgroundColor: '#059669',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 17 }}>⊞</Text>
         </View>
       </View>
 
@@ -414,13 +405,14 @@ export default function BucketListScreen() {
                   days: '—',
                 })
               }
-              style={{
+              style={({ pressed }) => ({
                 width: '100%',
                 height: 100,
                 borderRadius: 20,
                 overflow: 'hidden',
                 backgroundColor: '#1C1C2E',
-              }}
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              })}
             >
               {searchPhoto ? (
                 <Image
@@ -495,13 +487,14 @@ export default function BucketListScreen() {
               <Pressable
                 key={dest.name}
                 onPress={() => setSelectedDest(dest)}
-                style={{
+                style={({ pressed }) => ({
                   width: CARD_WIDTH,
                   height: 200,
                   borderRadius: 20,
                   overflow: 'hidden',
-                  backgroundColor: '#D1D5DB',
-                }}
+                  backgroundColor: '#E9EAEC',
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
               >
                 {photos[dest.name] ? (
                   <Image
@@ -510,12 +503,36 @@ export default function BucketListScreen() {
                     contentFit="cover"
                     transition={300}
                   />
-                ) : null}
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator color="#9CA3AF" size="small" />
+                  </View>
+                )}
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.9)']}
                   locations={[0.35, 0.68, 1]}
                   style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' }}
                 />
+                {/* Rating chip */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.45)',
+                    borderRadius: 100,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    gap: 3,
+                  }}
+                >
+                  <Text style={{ fontSize: 10 }}>⭐</Text>
+                  <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>
+                    {dest.rating}
+                  </Text>
+                </View>
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14 }}>
                   <Text
                     style={{ color: 'white', fontSize: 16, fontWeight: '700', letterSpacing: -0.3 }}
@@ -527,7 +544,7 @@ export default function BucketListScreen() {
                     style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 }}
                     numberOfLines={1}
                   >
-                    {dest.location}
+                    📍 {dest.location}
                   </Text>
                 </View>
               </Pressable>
@@ -538,20 +555,21 @@ export default function BucketListScreen() {
         {/* Popular section */}
         {showPopular ? (
           <View style={{ paddingHorizontal: 16, marginBottom: 32 }}>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 14 }}>
-              Popular ▾
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 14, letterSpacing: -0.3 }}>
+              Popular right now 🔥
             </Text>
             {POPULAR.map((dest) => (
               <Pressable
                 key={dest.name}
                 onPress={() => setSelectedDest(dest)}
-                style={{
+                style={({ pressed }) => ({
                   height: 140,
                   borderRadius: 20,
                   overflow: 'hidden',
                   marginBottom: 14,
-                  backgroundColor: '#D1D5DB',
-                }}
+                  backgroundColor: '#E9EAEC',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                })}
               >
                 {photos[dest.name] ? (
                   <Image
@@ -560,7 +578,11 @@ export default function BucketListScreen() {
                     contentFit="cover"
                     transition={300}
                   />
-                ) : null}
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator color="#9CA3AF" size="small" />
+                  </View>
+                )}
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.82)']}
                   locations={[0.2, 0.6, 1]}

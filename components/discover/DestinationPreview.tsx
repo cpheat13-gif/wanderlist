@@ -119,21 +119,23 @@ export function DestinationPreview({
           {/* Divider */}
           <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginBottom: 14 }} />
 
-          {/* Stats row */}
-          <View style={{ flexDirection: 'row', gap: 22, marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={{ fontSize: 14 }}>⭐</Text>
-              <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.rating}</Text>
+          {/* Stats row — hidden for custom searches with no curated data */}
+          {dest.rating !== '—' ? (
+            <View style={{ flexDirection: 'row', gap: 22, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ fontSize: 14 }}>⭐</Text>
+                <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.rating}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ fontSize: 14 }}>☀️</Text>
+                <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.bestTime}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ fontSize: 14 }}>📅</Text>
+                <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.days} days</Text>
+              </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={{ fontSize: 14 }}>☀️</Text>
-              <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.bestTime}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={{ fontSize: 14 }}>📅</Text>
-              <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{dest.days} days</Text>
-            </View>
-          </View>
+          ) : null}
 
           {/* Description */}
           <Text
@@ -164,13 +166,14 @@ export function DestinationPreview({
           <Pressable
             onPress={onAdd}
             disabled={adding}
-            style={{
+            style={({ pressed }) => ({
               backgroundColor: 'white',
               borderRadius: 100,
               paddingVertical: 16,
               alignItems: 'center',
               opacity: adding ? 0.7 : 1,
-            }}
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
           >
             {adding ? (
               <ActivityIndicator color="#111" />

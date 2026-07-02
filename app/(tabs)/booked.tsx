@@ -1,14 +1,13 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BookedFlightRow } from '../../components/discover/BookedFlightRow';
-import { BookedPlaceRow } from '../../components/discover/BookedPlaceRow';
-import { SectionLabel } from '../../components/SectionLabel';
+import { colorForCategory } from '../../theme/colors';
 import { supabase } from '../../lib/supabase';
 import { Flight, Place, Trip } from '../../lib/types';
 
 export default function BookedScreen() {
+  const router = useRouter();
   const [trips, setTrips] = useState<Record<string, Trip>>({});
   const [placesByTrip, setPlacesByTrip] = useState<Record<string, Place[]>>({});
   const [flightsByTrip, setFlightsByTrip] = useState<Record<string, Flight[]>>({});
@@ -105,21 +104,42 @@ export default function BookedScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-bg">
-      <View className="px-5 pt-4 pb-1">
-        <SectionLabel>Booked</SectionLabel>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 14 }}>
+        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', letterSpacing: -0.5 }}>
+          Booked
+        </Text>
+        <Text style={{ fontSize: 15, color: '#9CA3AF', marginTop: 4 }}>
+          Confirmed plans across all your trips
+        </Text>
       </View>
 
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#D4A857" />}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
       >
         {!loading && !hasAny ? (
-          <View className="items-center mt-20">
-            <Text className="text-textMuted text-base text-center">
-              Nothing booked yet — mark places as booked from the Planning tab.
+          <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
+            <Text style={{ fontSize: 44, marginBottom: 14 }}>🎟️</Text>
+            <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+              Nothing booked yet
             </Text>
+            <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
+              Check off places inside a trip once you've booked them and they'll show up here.
+            </Text>
+            <Pressable
+              onPress={() => router.push('/(tabs)')}
+              style={({ pressed }) => ({
+                backgroundColor: '#059669',
+                borderRadius: 100,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
+            >
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Go to Planning</Text>
+            </Pressable>
           </View>
         ) : null}
 
@@ -129,23 +149,137 @@ export default function BookedScreen() {
           const places = placesByTrip[tripId] ?? [];
           if (flights.length === 0 && places.length === 0) return null;
           return (
-            <View key={tripId} className="mb-7">
-              <Text className="text-text text-xl font-bold mb-3">{trip?.title ?? 'Trip'}</Text>
+            <View key={tripId} style={{ marginBottom: 28 }}>
+              <Pressable onPress={() => router.push(`/discover/${tripId}`)} hitSlop={4}>
+                <Text style={{ color: '#111', fontSize: 19, fontWeight: '700', marginBottom: 12, letterSpacing: -0.3 }}>
+                  {trip?.title ?? 'Trip'} ›
+                </Text>
+              </Pressable>
+
               {flights.map((flight) => (
-                <BookedFlightRow
+                <View
                   key={flight.id}
-                  flight={flight}
-                  onToggleBooked={() => toggleFlightBooked(flight)}
-                  onChangeConfirmation={(value) => changeFlightConfirmation(flight, value)}
-                />
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 16,
+                    padding: 14,
+                    marginBottom: 8,
+                    borderWidth: 1,
+                    borderColor: '#F3F4F6',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 16, marginRight: 10 }}>✈️</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#111', fontWeight: '600', fontSize: 15 }}>
+                        {flight.from_airport} → {flight.to_airport}
+                      </Text>
+                      {flight.airline || flight.flight_number ? (
+                        <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 2 }}>
+                          {[flight.airline, flight.flight_number].filter(Boolean).join(' · ')}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Pressable
+                      onPress={() => toggleFlightBooked(flight)}
+                      hitSlop={8}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 7,
+                        backgroundColor: '#059669',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    style={{
+                      marginTop: 10,
+                      backgroundColor: 'white',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      color: '#111',
+                      fontSize: 13,
+                    }}
+                    placeholder="Confirmation #"
+                    placeholderTextColor="#C4C4C4"
+                    defaultValue={flight.confirmation_number ?? ''}
+                    onEndEditing={(e) => changeFlightConfirmation(flight, e.nativeEvent.text)}
+                  />
+                </View>
               ))}
+
               {places.map((place) => (
-                <BookedPlaceRow
+                <View
                   key={place.id}
-                  place={place}
-                  onToggleBooked={() => togglePlaceBooked(place)}
-                  onChangeConfirmation={(value) => changePlaceConfirmation(place, value)}
-                />
+                  style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 16,
+                    padding: 14,
+                    marginBottom: 8,
+                    borderWidth: 1,
+                    borderColor: '#F3F4F6',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: colorForCategory(place.category),
+                        marginRight: 12,
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#111', fontWeight: '600', fontSize: 15 }}>
+                        {place.name}
+                      </Text>
+                      {place.notes ? (
+                        <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                          {place.notes}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Pressable
+                      onPress={() => togglePlaceBooked(place)}
+                      hitSlop={8}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 7,
+                        backgroundColor: '#059669',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    style={{
+                      marginTop: 10,
+                      backgroundColor: 'white',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      color: '#111',
+                      fontSize: 13,
+                    }}
+                    placeholder="Confirmation #"
+                    placeholderTextColor="#C4C4C4"
+                    defaultValue={place.confirmation_number ?? ''}
+                    onEndEditing={(e) => changePlaceConfirmation(place, e.nativeEvent.text)}
+                  />
+                </View>
               ))}
             </View>
           );

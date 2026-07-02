@@ -97,13 +97,37 @@ export default function BucketScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
       >
         {!loading && filtered.length === 0 ? (
-          <View style={{ alignItems: 'center', marginTop: 60 }}>
-            <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
-              {trips.length === 0
-                ? 'Nothing saved yet — browse Discover to add destinations.'
-                : 'No trips match your search.'}
-            </Text>
-          </View>
+          trips.length === 0 ? (
+            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
+              <Text style={{ fontSize: 44, marginBottom: 14 }}>🗺️</Text>
+              <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+                Your bucket list is empty
+              </Text>
+              <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
+                Find somewhere that makes your heart race and save it here.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/(tabs)/discover')}
+                style={({ pressed }) => ({
+                  backgroundColor: '#059669',
+                  borderRadius: 100,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
+              >
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>
+                  ✦ Explore destinations
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', marginTop: 60 }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
+                No trips match your search.
+              </Text>
+            </View>
+          )
         ) : null}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
@@ -112,7 +136,13 @@ export default function BucketScreen() {
               key={trip.id}
               onPress={() => router.push(`/discover/${trip.id}`)}
               onLongPress={() => confirmDelete(trip)}
-              style={{ width: CARD_WIDTH, height: 200, borderRadius: 20, overflow: 'hidden' }}
+              style={({ pressed }) => ({
+                width: CARD_WIDTH,
+                height: 200,
+                borderRadius: 20,
+                overflow: 'hidden',
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
             >
               {trip.cover_photo_url ? (
                 <Image

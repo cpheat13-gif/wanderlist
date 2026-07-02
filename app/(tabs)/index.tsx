@@ -113,13 +113,37 @@ export default function PlanningScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
       >
         {!loading && filtered.length === 0 ? (
-          <View style={{ alignItems: 'center', marginTop: 60 }}>
-            <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
-              {trips.length === 0
-                ? 'No trips in planning yet — move a trip here from the Explorer.'
-                : 'No trips match your search.'}
-            </Text>
-          </View>
+          trips.length === 0 ? (
+            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
+              <Text style={{ fontSize: 44, marginBottom: 14 }}>✈️</Text>
+              <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+                Nothing in planning yet
+              </Text>
+              <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
+                Open a trip from your bucket list and tap "Move to Planning" when you're ready to make it real.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/(tabs)/bucket')}
+                style={({ pressed }) => ({
+                  backgroundColor: '#059669',
+                  borderRadius: 100,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
+              >
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>
+                  ♡ View bucket list
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', marginTop: 60 }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
+                No trips match your search.
+              </Text>
+            </View>
+          )
         ) : null}
 
         {/* 2-column grid */}
@@ -131,7 +155,13 @@ export default function PlanningScreen() {
                 key={trip.id}
                 onPress={() => router.push(`/discover/${trip.id}`)}
                 onLongPress={() => confirmDelete(trip)}
-                style={{ width: CARD_WIDTH, height: 200, borderRadius: 20, overflow: 'hidden' }}
+                style={({ pressed }) => ({
+                  width: CARD_WIDTH,
+                  height: 200,
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
               >
                 {trip.cover_photo_url ? (
                   <Image

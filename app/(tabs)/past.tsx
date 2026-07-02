@@ -60,9 +60,13 @@ export default function PastScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
       >
         {!loading && trips.length === 0 ? (
-          <View style={{ alignItems: 'center', marginTop: 60 }}>
-            <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
-              No past trips yet — mark a trip as past from the Explorer.
+          <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
+            <Text style={{ fontSize: 44, marginBottom: 14 }}>📸</Text>
+            <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+              No memories here yet
+            </Text>
+            <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+              Once a trip is behind you it'll live here — your travel scrapbook in the making.
             </Text>
           </View>
         ) : null}
@@ -73,7 +77,13 @@ export default function PastScreen() {
               key={trip.id}
               onPress={() => router.push(`/discover/${trip.id}`)}
               onLongPress={() => confirmDelete(trip)}
-              style={{ width: CARD_WIDTH, height: 200, borderRadius: 20, overflow: 'hidden' }}
+              style={({ pressed }) => ({
+                width: CARD_WIDTH,
+                height: 200,
+                borderRadius: 20,
+                overflow: 'hidden',
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
             >
               {trip.cover_photo_url ? (
                 <Image
