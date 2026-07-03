@@ -106,11 +106,19 @@ export interface AiHighlight {
   secret: boolean;
 }
 
-export function fetchHighlights(params: {
+export interface DestinationDossier {
+  tagline: string;
+  intro: string;
+  facts: { season: string; language: string; currency: string; tripLength: string };
+  estDailyCost: number;
+  highlights: AiHighlight[];
+}
+
+export function fetchDestinationDossier(params: {
   destination: string;
   country?: string;
-}): Promise<{ highlights: AiHighlight[] }> {
-  return postClaude<{ highlights: AiHighlight[] }>({ mode: 'highlights', ...params });
+}): Promise<DestinationDossier> {
+  return postClaude<DestinationDossier>({ mode: 'highlights', ...params });
 }
 
 export interface ExploreResult {

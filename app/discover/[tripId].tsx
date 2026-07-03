@@ -128,9 +128,12 @@ export default function DestinationScreen() {
   function handleRefineItinerary() {
     if (collectionSlug) {
       router.push(`/plan/${collectionSlug}`);
-    } else {
-      router.push({ pathname: '/plan/custom', params: { tripId: trip!.id, name: trip!.title } });
+      return;
     }
+    const { country: tripCountry } = parseDestination(trip!.destination);
+    const planParams: Record<string, string> = { tripId: trip!.id, name: trip!.title };
+    if (tripCountry) planParams.country = tripCountry;
+    router.push({ pathname: '/plan/custom', params: planParams });
   }
 
   return (
@@ -163,7 +166,7 @@ export default function DestinationScreen() {
         {activeTab === 'chat' ? <ChatTab destination={name} country={country} /> : null}
       </View>
 
-      <DestinationTabBar active={activeTab} onChange={setActiveTab} showItinerary={itineraryRows.length > 0} />
+      <DestinationTabBar active={activeTab} onChange={setActiveTab} showItinerary />
     </View>
   );
 }

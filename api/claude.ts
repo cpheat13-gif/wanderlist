@@ -130,11 +130,33 @@ const REFINE_ITINERARY_TOOL = {
 };
 
 const HIGHLIGHTS_TOOL = {
-  name: 'destination_highlights',
-  description: 'Provide editorial highlights and local secrets for a destination.',
+  name: 'destination_dossier',
+  description: 'Provide a full editorial dossier for a destination: tagline, intro, key facts, cost estimate, and highlights.',
   input_schema: {
     type: 'object',
     properties: {
+      tagline: {
+        type: 'string',
+        description: "One evocative magazine tagline, e.g. 'Where the caldera catches fire at dusk'. No trailing period.",
+      },
+      intro: {
+        type: 'string',
+        description: '2-3 sentence editorial introduction in a premium travel-magazine voice. Specific and sensory, never generic.',
+      },
+      facts: {
+        type: 'object',
+        properties: {
+          season: { type: 'string', description: "Best months to visit, e.g. 'May – Oct'." },
+          language: { type: 'string', description: "Primary language(s), e.g. 'Spanish, English'. For multi-country regions, the dominant ones." },
+          currency: { type: 'string', description: "Currency with symbol, e.g. 'Euro (€)'. For regions, 'Varies' plus the main one." },
+          tripLength: { type: 'string', description: "Typical trip length, e.g. '5–7 days'." },
+        },
+        required: ['season', 'language', 'currency', 'tripLength'],
+      },
+      estDailyCost: {
+        type: 'number',
+        description: 'Rough mid-range per-person daily cost in USD (lodging + food + activities), rounded.',
+      },
       highlights: {
         type: 'array',
         minItems: 3,
@@ -151,7 +173,7 @@ const HIGHLIGHTS_TOOL = {
         },
       },
     },
-    required: ['highlights'],
+    required: ['tagline', 'intro', 'facts', 'estDailyCost', 'highlights'],
   },
 };
 
@@ -386,10 +408,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
       const result = await callClaude(
-        'You write for the editorial travel magazine Wanderlist. For the given destination, provide 3-5 ' +
-          '"highlights & local secrets": a mix of marquee experiences done the insider way and genuinely ' +
-          'lesser-known local spots. Magazine tone — specific, sensory, never generic. Mark the lesser-known ' +
-          'entries with secret: true.',
+        'You write for the editorial travel magazine Wanderlist. For the given destination — which may be a ' +
+          'city, a country, or a whole region like "North America" — produce a full editorial dossier: an ' +
+          'evocative tagline, a 2-3 sentence magazine intro, practical key facts, a rough mid-range per-person ' +
+          'daily cost in USD, and 3-5 "highlights & local secrets" (marquee experiences done the insider way ' +
+          'plus genuinely lesser-known spots, marked secret: true). Magazine tone throughout — specific, ' +
+          'sensory, never generic. For broad regions, choose facts and highlights that span it sensibly.',
         `Destination: ${destination}${country ? `, ${country}` : ''}`,
         HIGHLIGHTS_TOOL
       );

@@ -27,7 +27,6 @@ import {
   featuredDestination,
   formatPrice,
 } from '../../lib/editorial';
-import { DestinationPreview } from '../../components/discover/DestinationPreview';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const RAIL_CARD_W = Math.round(SCREEN_WIDTH * 0.62);
@@ -42,15 +41,13 @@ export default function DiscoverScreen() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [savedByTitle, setSavedByTitle] = useState<Record<string, string>>({});
-  const [customDest, setCustomDest] = useState<{ name: string; location: string; description: string } | null>(null);
-  const [customPhoto, setCustomPhoto] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
   const [searchPhoto, setSearchPhoto] = useState<string | null>(null);
   const [searchPhotoLoading, setSearchPhotoLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [concierge, setConcierge] = useState<DestinationSuggestion[]>([]);
   const [conciergeReply, setConciergeReply] = useState<string | null>(null);
   const [conciergeLoading, setConciergeLoading] = useState(false);
+  const [conciergeError, setConciergeError] = useState<string | null>(null);
   const [conciergePhotos, setConciergePhotos] = useState<Record<string, string>>({});
   const conciergeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const conciergeQueryRef = useRef<string>('');
@@ -168,12 +165,14 @@ export default function DiscoverScreen() {
     if (!q || q.length < 4 || results.length >= 3) {
       setConcierge([]);
       setConciergeReply(null);
+      setConciergeError(null);
       setConciergeLoading(false);
       conciergeQueryRef.current = '';
       return;
     }
     if (conciergeQueryRef.current === q) return;
     setConciergeLoading(true);
+    setConciergeError(null);
     conciergeTimerRef.current = setTimeout(async () => {
       conciergeQueryRef.current = q;
       try {
@@ -187,9 +186,11 @@ export default function DiscoverScreen() {
             if (photo) setConciergePhotos((prev) => ({ ...prev, [s.name]: photo.url }));
           });
         });
-      } catch {
+      } catch (err) {
+        if (conciergeQueryRef.current !== q) return;
         setConcierge([]);
         setConciergeReply(null);
+        setConciergeError(err instanceof Error ? err.message : 'The concierge could not be reached.');
       } finally {
         if (conciergeQueryRef.current === q) setConciergeLoading(false);
       }
@@ -198,31 +199,6 @@ export default function DiscoverScreen() {
       if (conciergeTimerRef.current) clearTimeout(conciergeTimerRef.current);
     };
   }, [search, results.length]);
-
-  async function handleAddCustom() {
-    if (!session || !customDest || adding) return;
-    setAdding(true);
-    try {
-      const { data: trip, error } = await supabase
-        .from('trips')
-        .insert({
-          created_by: session.user.id,
-          title: customDest.name,
-          destination: customDest.location ? `${customDest.name}, ${customDest.location}` : customDest.name,
-          cover_photo_url: customPhoto ?? null,
-          status: 'idea',
-        })
-        .select()
-        .single();
-      if (!error && trip) {
-        setCustomDest(null);
-        setSearch('');
-        router.push(`/discover/${trip.id}`);
-      }
-    } finally {
-      setAdding(false);
-    }
-  }
 
   function WishlistHeart({ dest, size = 34 }: { dest: EditorialDestination; size?: number }) {
     const saved = !!savedByTitle[dest.name];
@@ -458,6 +434,21 @@ export default function DiscoverScreen() {
                 </View>
               ) : null}
 
+              {conciergeError ? (
+                <Text
+                  style={{
+                    fontFamily: SERIF,
+                    fontStyle: 'italic',
+                    color: '#9CA3AF',
+                    fontSize: 13,
+                    lineHeight: 19,
+                    paddingVertical: 4,
+                  }}
+                >
+                  The concierge couldn't be reached — {conciergeError}
+                </Text>
+              ) : null}
+
               {concierge.length > 0 ? (
                 <View style={{ gap: 14 }}>
                   <View>
@@ -483,10 +474,12 @@ export default function DiscoverScreen() {
                   {concierge.map((s) => (
                     <Pressable
                       key={s.name}
-                      onPress={() => {
-                        setCustomPhoto(conciergePhotos[s.name] ?? null);
-                        setCustomDest({ name: s.name, location: s.country, description: s.blurb });
-                      }}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/destination/custom',
+                          params: { name: s.name, country: s.country },
+                        })
+                      }
                       style={({ pressed }) => ({
                         height: 132,
                         borderRadius: 18,
@@ -537,15 +530,9 @@ export default function DiscoverScreen() {
 
               {/* Custom destination card */}
               <Pressable
-                onPress={() => {
-                  setCustomPhoto(searchPhoto);
-                  setCustomDest({
-                    name: search.trim(),
-                    location: '',
-                    description:
-                      'Add this destination to your wishlist and start shaping the journey — hotels, food, activities, and the places only locals know.',
-                  });
-                }}
+                onPress={() =>
+                  router.push({ pathname: '/destination/custom', params: { name: search.trim() } })
+                }
                 style={({ pressed }) => ({
                   height: 96,
                   borderRadius: 18,
@@ -755,26 +742,6 @@ export default function DiscoverScreen() {
         )}
       </ScrollView>
 
-      {/* Custom destination preview (beyond the collection) */}
-      <DestinationPreview
-        dest={
-          customDest
-            ? {
-                name: customDest.name,
-                location: customDest.location,
-                description: customDest.description,
-                rating: '—',
-                bestTime: '—',
-                days: '—',
-              }
-            : null
-        }
-        photoUrl={customPhoto}
-        visible={!!customDest}
-        onClose={() => setCustomDest(null)}
-        onAdd={handleAddCustom}
-        adding={adding}
-      />
     </SafeAreaView>
   );
 }

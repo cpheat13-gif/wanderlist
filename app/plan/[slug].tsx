@@ -63,14 +63,14 @@ function rowsToDays(rows: ItineraryDayRow[]): ItineraryDay[] {
 }
 
 export default function PlanTripScreen() {
-  const params = useLocalSearchParams<{ slug: string; tripId?: string; name?: string }>();
+  const params = useLocalSearchParams<{ slug: string; tripId?: string; name?: string; country?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
 
   const dest = useMemo(() => destinationBySlug(params.slug ?? ''), [params.slug]);
   const destName = dest?.name ?? params.name ?? 'your destination';
-  const destCountry = dest?.country;
+  const destCountry = dest?.country ?? params.country;
   const dailyCost = dest?.estDailyCost ?? FALLBACK_DAILY_COST;
 
   const [phase, setPhase] = useState<Phase>('days');

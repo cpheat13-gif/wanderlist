@@ -16,65 +16,127 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
+import { fetchDestinationPhoto, fetchDestinationPhotos } from '../../lib/unsplash';
+import { DestinationDossier, fetchDestinationDossier } from '../../lib/ai';
+import { Highlight, SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GALLERY_H = Math.round(SCREEN_HEIGHT * 0.52);
 const GRID_W = Math.floor((SCREEN_WIDTH - 48 - 10) / 2);
+const FALLBACK_DAILY_COST = 150;
+
+// AI dossiers are cached for the session so revisiting a destination doesn't re-bill.
+const dossierCache = new Map<string, DestinationDossier>();
 
 export default function DestinationDetailScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const params = useLocalSearchParams<{ slug: string; name?: string; country?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
 
-  const dest = useMemo(() => destinationBySlug(slug ?? ''), [slug]);
+  const dest = useMemo(() => destinationBySlug(params.slug ?? ''), [params.slug]);
+  const isCustom = !dest && !!params.name;
+  const displayName = dest?.name ?? params.name ?? '';
+  const country = dest?.country ?? params.country;
+  const cacheKey = `${displayName}|${country ?? ''}`;
 
   const [gallery, setGallery] = useState<(string | null)[]>([null, null, null, null]);
   const [highlightPhotos, setHighlightPhotos] = useState<Record<number, string>>({});
   const [page, setPage] = useState(0);
   const [savedTripId, setSavedTripId] = useState<string | null>(null);
+  const [dossier, setDossier] = useState<DestinationDossier | null>(
+    isCustom ? (dossierCache.get(cacheKey) ?? null) : null
+  );
+  const [dossierLoading, setDossierLoading] = useState(false);
+  const [dossierError, setDossierError] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
     setStatusBarStyle('light');
     return () => setStatusBarStyle('dark');
   }, []));
 
+  // Unified view model — curated data for collection destinations, AI dossier for custom ones.
+  const tagline = dest?.tagline ?? dossier?.tagline ?? null;
+  const intro = dest?.intro ?? dossier?.intro ?? null;
+  const facts = dest?.facts ?? dossier?.facts ?? null;
+  const estDailyCost = dest?.estDailyCost ?? dossier?.estDailyCost ?? FALLBACK_DAILY_COST;
+  const highlights: Highlight[] = dest?.highlights ?? dossier?.highlights ?? [];
+  const kicker = dest
+    ? `${dest.region} · ${dest.country}`
+    : `From the concierge${country ? ` · ${country}` : ''}`;
+
+  const loadDossier = useCallback(async () => {
+    if (!isCustom || !displayName) return;
+    const cached = dossierCache.get(cacheKey);
+    if (cached) {
+      setDossier(cached);
+      return;
+    }
+    setDossierLoading(true);
+    setDossierError(null);
+    try {
+      const d = await fetchDestinationDossier({ destination: displayName, country });
+      dossierCache.set(cacheKey, d);
+      setDossier(d);
+    } catch (err) {
+      setDossierError(err instanceof Error ? err.message : 'The concierge could not be reached.');
+    } finally {
+      setDossierLoading(false);
+    }
+  }, [isCustom, displayName, country, cacheKey]);
+
   useEffect(() => {
-    if (!dest) return;
-    dest.galleryQueries.forEach((q, i) => {
-      fetchDestinationPhoto(q).then((photo) => {
-        if (photo)
-          setGallery((prev) => {
-            const next = [...prev];
-            next[i] = photo.url;
-            return next;
-          });
+    loadDossier();
+  }, [loadDossier]);
+
+  // Gallery photos
+  useEffect(() => {
+    if (dest) {
+      dest.galleryQueries.forEach((q, i) => {
+        fetchDestinationPhoto(q).then((photo) => {
+          if (photo)
+            setGallery((prev) => {
+              const next = [...prev];
+              next[i] = photo.url;
+              return next;
+            });
+        });
       });
-    });
-    dest.highlights.forEach((h, i) => {
+    } else if (displayName) {
+      fetchDestinationPhotos(`${displayName} ${country ?? ''} travel`, 4).then((photos) => {
+        if (photos.length > 0) {
+          setGallery((prev) => prev.map((_, i) => photos[i]?.url ?? prev[i] ?? null));
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dest, displayName]);
+
+  // Highlight photos (curated immediately; AI once the dossier lands)
+  useEffect(() => {
+    highlights.forEach((h, i) => {
       fetchDestinationPhoto(h.photoQuery).then((photo) => {
-        if (photo) setHighlightPhotos((prev) => ({ ...prev, [i]: photo.url }));
+        if (photo) setHighlightPhotos((prev) => (prev[i] ? prev : { ...prev, [i]: photo.url }));
       });
     });
-  }, [dest]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dest, dossier]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!dest) return;
+      if (!displayName) return;
       supabase
         .from('trips')
         .select('id')
         .eq('status', 'idea')
-        .eq('title', dest.name)
+        .eq('title', displayName)
         .limit(1)
         .then(({ data }) => setSavedTripId(data?.[0]?.id ?? null));
-    }, [dest])
+    }, [displayName])
   );
 
   async function toggleWishlist() {
-    if (!session || !dest) return;
+    if (!session || !displayName) return;
     if (savedTripId) {
       const id = savedTripId;
       setSavedTripId(null);
@@ -85,8 +147,8 @@ export default function DestinationDetailScreen() {
         .from('trips')
         .insert({
           created_by: session.user.id,
-          title: dest.name,
-          destination: `${dest.name}, ${dest.country}`,
+          title: displayName,
+          destination: country ? `${displayName}, ${country}` : displayName,
           cover_photo_url: gallery[0] ?? null,
           status: 'idea',
         })
@@ -94,6 +156,17 @@ export default function DestinationDetailScreen() {
         .single();
       setSavedTripId(data?.id ?? null);
     }
+  }
+
+  function handlePlan() {
+    if (dest) {
+      router.push(`/plan/${dest.slug}`);
+      return;
+    }
+    const planParams: Record<string, string> = { name: displayName };
+    if (country) planParams.country = country;
+    if (savedTripId && savedTripId !== 'pending') planParams.tripId = savedTripId;
+    router.push({ pathname: '/plan/custom', params: planParams });
   }
 
   function onGalleryScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -106,7 +179,7 @@ export default function DestinationDetailScreen() {
     else router.replace('/(tabs)/discover');
   }
 
-  if (!dest) {
+  if (!dest && !params.name) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FDFCFA', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: '#9CA3AF' }}>Destination not found.</Text>
@@ -236,76 +309,127 @@ export default function DestinationDetailScreen() {
               marginBottom: 8,
             }}
           >
-            {dest.region} · {dest.country}
+            {kicker}
           </Text>
           <Text style={{ fontFamily: SERIF, fontSize: 34, color: '#111', letterSpacing: -0.5 }}>
-            {dest.name}
-          </Text>
-          <Text
-            style={{
-              fontFamily: SERIF,
-              fontStyle: 'italic',
-              fontSize: 16,
-              color: '#6B7280',
-              marginTop: 6,
-              marginBottom: 18,
-            }}
-          >
-            {dest.tagline}
+            {displayName}
           </Text>
 
-          <Text style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 26, color: '#3F3F46' }}>
-            {dest.intro}
-          </Text>
+          {tagline ? (
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                fontSize: 16,
+                color: '#6B7280',
+                marginTop: 6,
+                marginBottom: 18,
+              }}
+            >
+              {tagline}
+            </Text>
+          ) : (
+            <View style={{ marginTop: 6, marginBottom: 18 }} />
+          )}
+
+          {intro ? (
+            <Text style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 26, color: '#3F3F46' }}>
+              {intro}
+            </Text>
+          ) : dossierLoading ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <ActivityIndicator color="#9CA3AF" size="small" />
+              <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14 }}>
+                The concierge is writing…
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Dossier error card — page stays functional regardless */}
+          {dossierError && !dossier ? (
+            <View
+              style={{
+                marginTop: 16,
+                backgroundColor: 'white',
+                borderWidth: 1,
+                borderColor: '#F0F0EE',
+                borderRadius: 16,
+                padding: 18,
+              }}
+            >
+              <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 15, marginBottom: 4 }}>
+                The concierge stepped away
+              </Text>
+              <Text style={{ color: '#9CA3AF', fontSize: 12.5, lineHeight: 18, marginBottom: 12 }}>
+                {dossierError}
+              </Text>
+              <Pressable
+                onPress={loadDossier}
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-start',
+                  borderWidth: 1,
+                  borderColor: '#111',
+                  borderRadius: 100,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                })}
+              >
+                <Text style={{ color: '#111', fontSize: 12.5, fontWeight: '700' }}>Try again</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* ── Key facts ── */}
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 24,
-              backgroundColor: 'white',
-              borderWidth: 1,
-              borderColor: '#F0F0EE',
-              borderRadius: 18,
-              overflow: 'hidden',
-            }}
-          >
-            {[
-              { label: 'Best season', value: dest.facts.season },
-              { label: 'Language', value: dest.facts.language },
-              { label: 'Currency', value: dest.facts.currency },
-              { label: 'Trip length', value: dest.facts.tripLength },
-            ].map((f, i) => (
-              <View
-                key={f.label}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  paddingHorizontal: 6,
-                  alignItems: 'center',
-                  borderLeftWidth: i > 0 ? 1 : 0,
-                  borderLeftColor: '#F0F0EE',
-                }}
-              >
-                <Text
+          {facts ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                marginTop: 24,
+                backgroundColor: 'white',
+                borderWidth: 1,
+                borderColor: '#F0F0EE',
+                borderRadius: 18,
+                overflow: 'hidden',
+              }}
+            >
+              {[
+                { label: 'Best season', value: facts.season },
+                { label: 'Language', value: facts.language },
+                { label: 'Currency', value: facts.currency },
+                { label: 'Trip length', value: facts.tripLength },
+              ].map((f, i) => (
+                <View
+                  key={f.label}
                   style={{
-                    color: '#9CA3AF',
-                    fontSize: 8.5,
-                    fontWeight: '700',
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                    marginBottom: 5,
-                    textAlign: 'center',
+                    flex: 1,
+                    paddingVertical: 14,
+                    paddingHorizontal: 6,
+                    alignItems: 'center',
+                    borderLeftWidth: i > 0 ? 1 : 0,
+                    borderLeftColor: '#F0F0EE',
                   }}
                 >
-                  {f.label}
-                </Text>
-                <Text style={{ color: '#111', fontSize: 11.5, fontWeight: '600', textAlign: 'center' }}>
-                  {f.value}
-                </Text>
-              </View>
-            ))}
-          </View>
+                  <Text
+                    style={{
+                      color: '#9CA3AF',
+                      fontSize: 8.5,
+                      fontWeight: '700',
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      marginBottom: 5,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {f.label}
+                  </Text>
+                  <Text style={{ color: '#111', fontSize: 11.5, fontWeight: '600', textAlign: 'center' }}>
+                    {f.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {/* ── Photo grid ── */}
           <View style={{ marginTop: 30 }}>
@@ -351,7 +475,16 @@ export default function DestinationDetailScreen() {
               The marquee moments — and the ones the guidebooks miss.
             </Text>
 
-            {dest.highlights.map((h, i) => (
+            {highlights.length === 0 && dossierLoading ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <ActivityIndicator color="#9CA3AF" size="small" />
+                <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13.5 }}>
+                  Gathering the secrets…
+                </Text>
+              </View>
+            ) : null}
+
+            {highlights.map((h, i) => (
               <View key={h.title} style={{ marginBottom: 24 }}>
                 <View
                   style={{
@@ -435,12 +568,12 @@ export default function DestinationDetailScreen() {
             Est. daily
           </Text>
           <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20 }}>
-            {formatPrice(dest.estDailyCost)}
+            {formatPrice(estDailyCost)}
             <Text style={{ fontSize: 12, color: '#9CA3AF' }}> / person</Text>
           </Text>
         </View>
         <Pressable
-          onPress={() => router.push(`/plan/${dest.slug}`)}
+          onPress={handlePlan}
           style={({ pressed }) => ({
             flex: 1,
             backgroundColor: '#111',

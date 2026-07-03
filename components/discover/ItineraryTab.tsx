@@ -16,6 +16,44 @@ export function ItineraryTab({
   const total =
     trip.est_cost_per_person ?? sorted.reduce((sum, r) => sum + (r.est_cost ?? 0), 0);
 
+  if (sorted.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FDFCFA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36 }}>
+        <Text style={{ fontSize: 36, marginBottom: 16 }}>☰</Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 21, color: '#111', marginBottom: 8, textAlign: 'center' }}>
+          No itinerary yet
+        </Text>
+        <Text
+          style={{
+            fontFamily: SERIF,
+            fontStyle: 'italic',
+            color: '#9CA3AF',
+            fontSize: 14,
+            textAlign: 'center',
+            lineHeight: 22,
+            marginBottom: 24,
+          }}
+        >
+          Answer three questions and the concierge{'\n'}drafts your days in {trip.title}.
+        </Text>
+        <Pressable
+          onPress={onRefine}
+          style={({ pressed }) => ({
+            backgroundColor: '#111',
+            borderRadius: 100,
+            paddingHorizontal: 28,
+            paddingVertical: 14,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 14.5, fontWeight: '700' }}>
+            ✦ Plan it with the concierge
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#FDFCFA' }}
