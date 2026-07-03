@@ -69,6 +69,10 @@ client.
    client and expose it.
 3. In your local `.env`, set `EXPO_PUBLIC_API_BASE_URL` to your Vercel
    deployment URL (e.g. `https://your-app.vercel.app`), no trailing slash.
+   This is only needed for **native** builds (Expo Go / device). On the
+   **web** build the app calls `/api/claude` on its own origin, so it works
+   without this variable and can't drift out of sync when Vercel mints a new
+   deployment URL.
 4. Redeploy after adding the env var so it takes effect.
 
 Without this configured, every other tab still works — Discover will just

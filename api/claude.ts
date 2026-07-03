@@ -1,5 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Structured tool-use calls can run longer than the 10s Hobby default; give the
+// function room so the connection isn't dropped mid-response (which surfaces as
+// an opaque "Load failed" on the client).
+export const config = { maxDuration: 60 };
+
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = 'claude-sonnet-4-6';
 
@@ -286,6 +291,15 @@ async function callClaude(system: string, userTextOrMessages: string | ClaudeMes
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Allow cross-origin callers (native builds, or a web app served from a
+  // different origin than this function) and answer the preflight.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

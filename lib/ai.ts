@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { PlaceCategory } from './types';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -52,7 +53,12 @@ function requireBaseUrl(): string {
 }
 
 async function postClaude<T>(body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${requireBaseUrl()}/api/claude`, {
+  // On web the SPA and the /api/claude function are served from the same Vercel
+  // deployment, so use a relative URL — same-origin, no CORS, and immune to
+  // EXPO_PUBLIC_API_BASE_URL drifting out of sync after redeploys. Native builds
+  // have no same-origin, so they still need the absolute base URL.
+  const base = Platform.OS === 'web' ? '' : requireBaseUrl();
+  const res = await fetch(`${base}/api/claude`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
