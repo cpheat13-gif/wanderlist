@@ -62,7 +62,7 @@ export default function OnboardingScreen() {
 
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const p = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    if (p !== page) setPage(p);
+    if (p !== page && p >= 0 && p < PAGES.length) setPage(p);
   }
 
   async function finish() {
@@ -73,7 +73,11 @@ export default function OnboardingScreen() {
 
   function next() {
     if (page < PAGES.length - 1) {
-      scrollRef.current?.scrollTo({ x: (page + 1) * SCREEN_WIDTH, animated: true });
+      // Drive the state directly — scroll-end events are unreliable for
+      // programmatic scrolls (and on web), which left the button stuck on page 1.
+      const target = page + 1;
+      setPage(target);
+      scrollRef.current?.scrollTo({ x: target * SCREEN_WIDTH, animated: true });
     } else {
       finish();
     }
@@ -89,6 +93,8 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScroll}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
       >
         {PAGES.map((p, i) => (
           <View key={i} style={{ width: SCREEN_WIDTH, flex: 1 }}>
