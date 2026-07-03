@@ -58,14 +58,40 @@ async function postClaude<T>(body: Record<string, unknown>): Promise<T> {
   // EXPO_PUBLIC_API_BASE_URL drifting out of sync after redeploys. Native builds
   // have no same-origin, so they still need the absolute base URL.
   const base = Platform.OS === 'web' ? '' : requireBaseUrl();
-  const res = await fetch(`${base}/api/claude`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json();
+
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api/claude`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Transport-level failure (timeout, connection reset, offline). Never let
+    // the raw platform message (e.g. WebKit's "The string did not match the
+    // expected pattern" / "Load failed") reach the UI.
+    throw new Error("Couldn't reach the planner — check your connection and try again.");
+  }
+
+  // Read the body once as text, then parse defensively. When a long request
+  // exceeds the Vercel function limit the response is a non-JSON gateway/timeout
+  // page, which would otherwise throw an opaque parse error.
+  const raw = await res.text();
+  let json: { error?: string } | null = null;
+  try {
+    json = raw ? JSON.parse(raw) : null;
+  } catch {
+    if ([408, 502, 503, 504, 524].includes(res.status)) {
+      throw new Error('The planner took too long for a trip this long — try 7 days or fewer, or try again.');
+    }
+    throw new Error(`The planner hit an unexpected error (HTTP ${res.status}). Please try again.`);
+  }
+
   if (!res.ok) {
-    throw new Error(json.error ?? `Request failed with status ${res.status}`);
+    if ([408, 502, 503, 504, 524].includes(res.status)) {
+      throw new Error('The planner took too long for a trip this long — try 7 days or fewer, or try again.');
+    }
+    throw new Error(json?.error ?? `Request failed with status ${res.status}`);
   }
   return json as T;
 }

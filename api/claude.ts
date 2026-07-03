@@ -67,19 +67,21 @@ const BUILD_ITINERARY_TOOL = {
           properties: {
             day: { type: 'number' },
             title: { type: 'string', description: "Short evocative day title, e.g. 'Into the caldera'." },
-            summary: { type: 'string' },
+            summary: { type: 'string', description: 'One short sentence framing the day.' },
             estCostPerPersonUsd: {
               type: 'number',
               description: 'Rough per-person cost for this day in USD (lodging + food + activities), rounded.',
             },
             items: {
               type: 'array',
+              maxItems: 4,
+              description: 'Up to 4 stops for the day.',
               items: {
                 type: 'object',
                 properties: {
                   title: { type: 'string' },
                   category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
-                  description: { type: 'string' },
+                  description: { type: 'string', description: 'One crisp sentence (~15-20 words).' },
                 },
                 required: ['title', 'category', 'description'],
               },
@@ -365,10 +367,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'and sightseeing. Give each day a short evocative title and a rough per-person daily cost in USD ' +
           '(lodging + food + activities, mid-range unless preferences imply otherwise). Also give a rough ' +
           'round-trip flight cost estimate based on general knowledge — always caveat it as a rough, non-live ' +
-          'estimate, not real-time pricing. Season matters: tailor activities to the stated time of year.',
+          'estimate, not real-time pricing. Season matters: tailor activities to the stated time of year. ' +
+          'Be concise so longer trips stay fast: at most 4 stops per day, each description one crisp sentence ' +
+          '(~15-20 words), and a one-line day summary. Quality over verbosity.',
         userText,
         BUILD_ITINERARY_TOOL,
-        8192
+        5000
       );
       res.status(200).json(result);
       return;
@@ -421,7 +425,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'the itinerary unchanged. Keep changes surgical: preserve days they have not asked you to touch.',
         [...priorMessages, { role: 'user', content: context }],
         REFINE_ITINERARY_TOOL,
-        8192
+        5000
       );
       res.status(200).json(result);
       return;
