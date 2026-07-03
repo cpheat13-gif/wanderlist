@@ -5,15 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
-import { Place, Trip } from '../../lib/types';
+import { SERIF, formatPrice } from '../../lib/editorial';
+import { Trip } from '../../lib/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 32 - 12) / 2);
+const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48 - 12) / 2);
 
 export default function PlanningScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [placeCountByTrip, setPlaceCountByTrip] = useState<Record<string, number>>({});
+  const [dayCountByTrip, setDayCountByTrip] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -29,17 +30,20 @@ export default function PlanningScreen() {
 
     const tripIds = allTrips.map((t) => t.id);
     if (tripIds.length === 0) {
-      setPlaceCountByTrip({});
+      setDayCountByTrip({});
       setLoading(false);
       return;
     }
 
-    const { data: placesData } = await supabase.from('places').select('id, trip_id').in('trip_id', tripIds);
+    const { data: dayRows } = await supabase
+      .from('itinerary_days')
+      .select('trip_id')
+      .in('trip_id', tripIds);
     const counts: Record<string, number> = {};
-    (placesData ?? []).forEach((p: Pick<Place, 'id' | 'trip_id'>) => {
-      counts[p.trip_id] = (counts[p.trip_id] ?? 0) + 1;
+    (dayRows ?? []).forEach((r: { trip_id: string }) => {
+      counts[r.trip_id] = (counts[r.trip_id] ?? 0) + 1;
     });
-    setPlaceCountByTrip(counts);
+    setDayCountByTrip(counts);
     setLoading(false);
   }, []);
 
@@ -55,7 +59,7 @@ export default function PlanningScreen() {
   }
 
   function confirmDelete(trip: Trip) {
-    Alert.alert('Delete trip?', `"${trip.title}" will be permanently deleted.`, [
+    Alert.alert('Delete trip?', `"${trip.title}" and its itinerary will be permanently deleted.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => handleDelete(trip) },
     ]);
@@ -71,37 +75,54 @@ export default function PlanningScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
+      {/* Masthead */}
+      <View style={{ paddingHorizontal: 24, paddingTop: 14, paddingBottom: 14 }}>
+        <Text
+          style={{
+            color: '#9CA3AF',
+            fontSize: 10,
+            fontWeight: '700',
+            letterSpacing: 3,
+            textTransform: 'uppercase',
+            marginBottom: 6,
+          }}
+        >
+          In the works
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 34, color: '#111', letterSpacing: -0.5 }}>
           Planning
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+          From wish to window seat.
         </Text>
       </View>
 
-      {/* Search row */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14, gap: 10 }}>
+      {/* Search */}
+      <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
         <View
           style={{
-            flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: '#F3F4F6',
+            borderWidth: 1,
+            borderColor: '#E5E7EB',
             borderRadius: 100,
-            paddingHorizontal: 16,
+            paddingHorizontal: 18,
             height: 46,
+            backgroundColor: 'white',
           }}
         >
-          <Text style={{ color: '#9CA3AF', fontSize: 15, marginRight: 8 }}>🔍</Text>
+          <Text style={{ color: '#9CA3AF', fontSize: 14, marginRight: 10 }}>⌕</Text>
           <TextInput
             style={{ flex: 1, color: '#111', fontSize: 14 }}
-            placeholder="Search trips..."
-            placeholderTextColor="#9CA3AF"
+            placeholder="Search your plans…"
+            placeholderTextColor="#B6BAC2"
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 ? (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
-              <Text style={{ color: '#9CA3AF', fontSize: 15 }}>✕</Text>
+            <Pressable onPress={() => setSearch('')} hitSlop={12}>
+              <Text style={{ color: '#9CA3AF', fontSize: 14 }}>✕</Text>
             </Pressable>
           ) : null}
         </View>
@@ -109,47 +130,66 @@ export default function PlanningScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#111" />}
       >
         {!loading && filtered.length === 0 ? (
           trips.length === 0 ? (
-            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
-              <Text style={{ fontSize: 44, marginBottom: 14 }}>✈️</Text>
-              <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+            <View style={{ alignItems: 'center', marginTop: 56, paddingHorizontal: 20 }}>
+              <Text style={{ fontSize: 40, marginBottom: 16 }}>✈</Text>
+              <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>
                 Nothing in planning yet
               </Text>
-              <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
-                Open a trip from your bucket list and tap "Move to Planning" when you're ready to make it real.
+              <Text
+                style={{
+                  fontFamily: SERIF,
+                  fontStyle: 'italic',
+                  color: '#9CA3AF',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  lineHeight: 22,
+                  marginBottom: 22,
+                }}
+              >
+                Open a destination and tap{'\n'}"Plan trip itinerary" to begin.
               </Text>
               <Pressable
                 onPress={() => router.push('/(tabs)/bucket')}
                 style={({ pressed }) => ({
-                  backgroundColor: '#059669',
+                  backgroundColor: '#111',
                   borderRadius: 100,
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
+                  paddingHorizontal: 26,
+                  paddingVertical: 13,
                   transform: [{ scale: pressed ? 0.97 : 1 }],
                 })}
               >
-                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>
-                  ♡ View bucket list
-                </Text>
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>♡ View wishlist</Text>
               </Pressable>
             </View>
           ) : (
-            <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
-                No trips match your search.
-              </Text>
-            </View>
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                color: '#9CA3AF',
+                fontSize: 14,
+                textAlign: 'center',
+                marginTop: 48,
+              }}
+            >
+              No plans match that.
+            </Text>
           )
         ) : null}
 
-        {/* 2-column grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {filtered.map((trip) => {
-            const count = placeCountByTrip[trip.id] ?? 0;
+            const dayCount = dayCountByTrip[trip.id] ?? 0;
+            const est = trip.est_cost_per_person;
+            const meta =
+              dayCount > 0
+                ? `${dayCount} days${est ? ` · est ${formatPrice(Math.round(est))} pp` : ''}`
+                : 'No itinerary yet';
             return (
               <Pressable
                 key={trip.id}
@@ -157,9 +197,10 @@ export default function PlanningScreen() {
                 onLongPress={() => confirmDelete(trip)}
                 style={({ pressed }) => ({
                   width: CARD_WIDTH,
-                  height: 200,
+                  height: 210,
                   borderRadius: 20,
                   overflow: 'hidden',
+                  backgroundColor: '#E9EAEC',
                   transform: [{ scale: pressed ? 0.97 : 1 }],
                 })}
               >
@@ -169,47 +210,29 @@ export default function PlanningScreen() {
                     style={{ width: '100%', height: '100%' }}
                     contentFit="cover"
                   />
-                ) : (
-                  <View style={{ flex: 1, backgroundColor: '#E5E7EB' }} />
-                )}
-
+                ) : null}
                 <LinearGradient
-                  colors={['transparent', 'rgba(11,11,14,0.72)', 'rgba(11,11,14,0.96)']}
-                  locations={[0.3, 0.65, 1]}
-                  style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
+                  colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']}
+                  locations={[0.3, 0.6, 1]}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                 />
-
-                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                  <Text
-                    style={{ color: 'white', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 }}
-                    numberOfLines={1}
-                  >
+                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14 }}>
+                  <Text style={{ fontFamily: SERIF, color: 'white', fontSize: 18 }} numberOfLines={1}>
                     {trip.title}
                   </Text>
-                  {trip.destination && trip.destination !== trip.title ? (
-                    <Text
-                      style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}
-                      numberOfLines={1}
-                    >
-                      {trip.destination}
-                    </Text>
-                  ) : null}
-                  {count > 0 ? (
-                    <View
-                      style={{
-                        marginTop: 5,
-                        alignSelf: 'flex-start',
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        borderRadius: 100,
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                      }}
-                    >
-                      <Text style={{ color: 'white', fontSize: 10, fontWeight: '600' }}>
-                        {count} {count === 1 ? 'place' : 'places'}
-                      </Text>
-                    </View>
-                  ) : null}
+                  <Text
+                    style={{
+                      color: 'rgba(255,255,255,0.75)',
+                      fontSize: 10.5,
+                      fontWeight: '600',
+                      letterSpacing: 0.8,
+                      textTransform: 'uppercase',
+                      marginTop: 4,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {meta}
+                  </Text>
                 </View>
               </Pressable>
             );

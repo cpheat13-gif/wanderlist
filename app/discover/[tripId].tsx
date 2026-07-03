@@ -7,8 +7,10 @@ import { DestinationTab, DestinationTabBar } from '../../components/discover/Des
 import { ExplorerTab } from '../../components/discover/ExplorerTab';
 import { FlightsTab } from '../../components/discover/FlightsTab';
 import { ChatTab } from '../../components/discover/ChatTab';
+import { ItineraryTab } from '../../components/discover/ItineraryTab';
 import { supabase } from '../../lib/supabase';
-import { Place, Trip, TripStatus } from '../../lib/types';
+import { DESTINATIONS } from '../../lib/editorial';
+import { ItineraryDayRow, Place, Trip, TripStatus } from '../../lib/types';
 
 function parseDestination(destination: string | null): { name: string; country?: string } {
   if (!destination) return { name: 'this trip' };
@@ -42,7 +44,9 @@ export default function DestinationScreen() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [flightCount, setFlightCount] = useState(0);
+  const [itineraryRows, setItineraryRows] = useState<ItineraryDayRow[]>([]);
   const [activeTab, setActiveTab] = useState<DestinationTab>('explorer');
+  const [tabInitialized, setTabInitialized] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -72,6 +76,20 @@ export default function DestinationScreen() {
         .select('*', { count: 'exact', head: true })
         .eq('trip_id', tripId)
         .then(({ count }) => setFlightCount(count ?? 0));
+
+      supabase
+        .from('itinerary_days')
+        .select('*')
+        .eq('trip_id', tripId)
+        .then(({ data }) => {
+          const rows = (data ?? []) as ItineraryDayRow[];
+          setItineraryRows(rows);
+          // Trips with a built itinerary open on it by default (once).
+          setTabInitialized((done) => {
+            if (!done && rows.length > 0) setActiveTab('itinerary');
+            return true;
+          });
+        });
     }, [tripId])
   );
 
@@ -105,6 +123,16 @@ export default function DestinationScreen() {
 
   const { name, country } = parseDestination(trip.destination);
 
+  const collectionSlug = DESTINATIONS.find((d) => d.name === trip.title)?.slug;
+
+  function handleRefineItinerary() {
+    if (collectionSlug) {
+      router.push(`/plan/${collectionSlug}`);
+    } else {
+      router.push({ pathname: '/plan/custom', params: { tripId: trip!.id, name: trip!.title } });
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: '#F2F2F4' }}>
       {activeTab !== 'explorer' ? (
@@ -112,6 +140,9 @@ export default function DestinationScreen() {
       ) : null}
 
       <View style={{ flex: 1 }}>
+        {activeTab === 'itinerary' ? (
+          <ItineraryTab trip={trip} rows={itineraryRows} onRefine={handleRefineItinerary} />
+        ) : null}
         {activeTab === 'explorer' ? (
           <ExplorerTab
             tripId={trip.id}
@@ -132,7 +163,7 @@ export default function DestinationScreen() {
         {activeTab === 'chat' ? <ChatTab destination={name} country={country} /> : null}
       </View>
 
-      <DestinationTabBar active={activeTab} onChange={setActiveTab} />
+      <DestinationTabBar active={activeTab} onChange={setActiveTab} showItinerary={itineraryRows.length > 0} />
     </View>
   );
 }

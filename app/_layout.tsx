@@ -44,7 +44,7 @@ function RootNavigator() {
       <Stack.Screen name="trip/[id]/map" options={{ title: 'Map' }} />
       <Stack.Screen name="discover/[tripId]" options={{ headerShown: false }} />
       <Stack.Screen name="destination/[slug]" options={{ headerShown: false }} />
-      <Stack.Screen name="tour/[slug]" options={{ headerShown: false }} />
+      <Stack.Screen name="plan/[slug]" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );

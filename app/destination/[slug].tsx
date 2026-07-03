@@ -17,23 +17,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { SERIF, destinationBySlug, formatPrice, tourForDestination } from '../../lib/editorial';
+import { SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GALLERY_H = Math.round(SCREEN_HEIGHT * 0.52);
 const GRID_W = Math.floor((SCREEN_WIDTH - 48 - 10) / 2);
-
-function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 1 }}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Text key={i} style={{ fontSize: size, color: i <= Math.round(rating) ? '#111' : '#D1D5DB' }}>
-          ★
-        </Text>
-      ))}
-    </View>
-  );
-}
 
 export default function DestinationDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -42,9 +30,9 @@ export default function DestinationDetailScreen() {
   const { session } = useAuth();
 
   const dest = useMemo(() => destinationBySlug(slug ?? ''), [slug]);
-  const tour = useMemo(() => tourForDestination(slug ?? ''), [slug]);
 
   const [gallery, setGallery] = useState<(string | null)[]>([null, null, null, null]);
+  const [highlightPhotos, setHighlightPhotos] = useState<Record<number, string>>({});
   const [page, setPage] = useState(0);
   const [savedTripId, setSavedTripId] = useState<string | null>(null);
 
@@ -63,6 +51,11 @@ export default function DestinationDetailScreen() {
             next[i] = photo.url;
             return next;
           });
+      });
+    });
+    dest.highlights.forEach((h, i) => {
+      fetchDestinationPhoto(h.photoQuery).then((photo) => {
+        if (photo) setHighlightPhotos((prev) => ({ ...prev, [i]: photo.url }));
       });
     });
   }, [dest]);
@@ -120,8 +113,6 @@ export default function DestinationDetailScreen() {
       </View>
     );
   }
-
-  const totalReviews = dest.reviewCount;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
@@ -342,80 +333,78 @@ export default function DestinationDetailScreen() {
             </View>
           </View>
 
-          {/* ── Reviews ── */}
+          {/* ── Highlights & local secrets ── */}
           <View style={{ marginTop: 32 }}>
             <View style={{ width: 28, height: 2, backgroundColor: '#111', marginBottom: 10 }} />
-            <Text style={{ fontFamily: SERIF, fontSize: 21, color: '#111', marginBottom: 16 }}>
-              From fellow travelers
+            <Text style={{ fontFamily: SERIF, fontSize: 21, color: '#111', marginBottom: 4 }}>
+              Highlights & local secrets
+            </Text>
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                color: '#9CA3AF',
+                fontSize: 13.5,
+                marginBottom: 18,
+              }}
+            >
+              The marquee moments — and the ones the guidebooks miss.
             </Text>
 
-            {/* Summary + distribution */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22, marginBottom: 20 }}>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontFamily: SERIF, fontSize: 44, color: '#111', lineHeight: 48 }}>
-                  {dest.rating.toFixed(1)}
-                </Text>
-                <Stars rating={dest.rating} />
-                <Text style={{ color: '#9CA3AF', fontSize: 11, marginTop: 4 }}>
-                  {totalReviews} journeys
-                </Text>
-              </View>
-              <View style={{ flex: 1, gap: 5 }}>
-                {dest.ratingDist.map((pct, i) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ color: '#9CA3AF', fontSize: 10, width: 8 }}>{5 - i}</Text>
-                    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: '#EEEEEA' }}>
-                      <View
-                        style={{
-                          width: `${pct}%`,
-                          height: 4,
-                          borderRadius: 2,
-                          backgroundColor: '#111',
-                        }}
-                      />
+            {dest.highlights.map((h, i) => (
+              <View key={h.title} style={{ marginBottom: 24 }}>
+                <View
+                  style={{
+                    height: 180,
+                    borderRadius: 18,
+                    overflow: 'hidden',
+                    backgroundColor: '#E9EAEC',
+                    marginBottom: 12,
+                  }}
+                >
+                  {highlightPhotos[i] ? (
+                    <Image
+                      source={{ uri: highlightPhotos[i] }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                  ) : (
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <ActivityIndicator color="#9CA3AF" size="small" />
                     </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Review cards */}
-            {dest.reviews.map((r) => (
-              <View
-                key={r.name}
-                style={{
-                  backgroundColor: 'white',
-                  borderWidth: 1,
-                  borderColor: '#F0F0EE',
-                  borderRadius: 16,
-                  padding: 16,
-                  marginBottom: 10,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  <View
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 17,
-                      backgroundColor: '#17171E',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 10,
-                    }}
-                  >
-                    <Text style={{ color: 'white', fontFamily: SERIF, fontSize: 15 }}>
-                      {r.name.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#111', fontWeight: '600', fontSize: 13.5 }}>{r.name}</Text>
-                    <Text style={{ color: '#9CA3AF', fontSize: 11, marginTop: 1 }}>{r.date}</Text>
-                  </View>
-                  <Stars rating={r.rating} size={11} />
+                  )}
+                  {h.secret ? (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        backgroundColor: '#17171E',
+                        borderRadius: 100,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: 'white',
+                          fontSize: 9,
+                          fontWeight: '700',
+                          letterSpacing: 1.5,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        ✳ Local secret
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-                <Text style={{ fontFamily: SERIF, color: '#3F3F46', fontSize: 13.5, lineHeight: 21 }}>
-                  “{r.text}”
+                <Text style={{ fontFamily: SERIF, fontSize: 18, color: '#111', marginBottom: 5 }}>
+                  {h.title}
+                </Text>
+                <Text style={{ fontFamily: SERIF, color: '#3F3F46', fontSize: 14, lineHeight: 22 }}>
+                  {h.blurb}
                 </Text>
               </View>
             ))}
@@ -424,48 +413,46 @@ export default function DestinationDetailScreen() {
       </ScrollView>
 
       {/* ── Sticky CTA ── */}
-      {tour ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            paddingHorizontal: 24,
-            paddingTop: 12,
-            paddingBottom: insets.bottom + 14,
-            backgroundColor: '#FDFCFA',
-            borderTopWidth: 1,
-            borderTopColor: '#F0F0EE',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 16,
-          }}
-        >
-          <View>
-            <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
-              From
-            </Text>
-            <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20 }}>
-              {formatPrice(dest.fromPrice)}
-              <Text style={{ fontSize: 12, color: '#9CA3AF' }}> / person</Text>
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push(`/tour/${tour.slug}`)}
-            style={({ pressed }) => ({
-              flex: 1,
-              backgroundColor: '#111',
-              borderRadius: 100,
-              paddingVertical: 16,
-              alignItems: 'center',
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            })}
-          >
-            <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Explore tours</Text>
-          </Pressable>
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: 24,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 14,
+          backgroundColor: '#FDFCFA',
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0EE',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        <View>
+          <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
+            Est. daily
+          </Text>
+          <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20 }}>
+            {formatPrice(dest.estDailyCost)}
+            <Text style={{ fontSize: 12, color: '#9CA3AF' }}> / person</Text>
+          </Text>
         </View>
-      ) : null}
+        <Pressable
+          onPress={() => router.push(`/plan/${dest.slug}`)}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: '#111',
+            borderRadius: 100,
+            paddingVertical: 16,
+            alignItems: 'center',
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Plan trip itinerary</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

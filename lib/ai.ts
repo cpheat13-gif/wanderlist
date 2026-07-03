@@ -22,7 +22,9 @@ export interface ItineraryItem {
 
 export interface ItineraryDay {
   day: number;
+  title: string;
   summary: string;
+  estCostPerPersonUsd: number;
   items: ItineraryItem[];
 }
 
@@ -72,8 +74,43 @@ export function buildItinerary(params: {
   departureCity?: string;
   travelTiming?: string;
   interests?: string;
+  days?: number;
+  season?: string;
+  travelers?: number;
 }): Promise<ItineraryResponse> {
   return postClaude<ItineraryResponse>({ mode: 'itinerary', ...params });
+}
+
+export interface RefineResponse {
+  reply: string;
+  days: ItineraryDay[];
+}
+
+export function refineItinerary(params: {
+  destination: string;
+  country?: string;
+  days?: number;
+  season?: string;
+  travelers?: number;
+  itinerary: ItineraryDay[];
+  message: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<RefineResponse> {
+  return postClaude<RefineResponse>({ mode: 'refine', ...params });
+}
+
+export interface AiHighlight {
+  title: string;
+  blurb: string;
+  photoQuery: string;
+  secret: boolean;
+}
+
+export function fetchHighlights(params: {
+  destination: string;
+  country?: string;
+}): Promise<{ highlights: AiHighlight[] }> {
+  return postClaude<{ highlights: AiHighlight[] }>({ mode: 'highlights', ...params });
 }
 
 export interface ExploreResult {

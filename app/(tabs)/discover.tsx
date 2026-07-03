@@ -17,11 +17,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
+import { DestinationSuggestion, suggestDestinations } from '../../lib/ai';
 import {
   DESTINATIONS,
   EditorialDestination,
   REGIONS,
   SERIF,
+  VIBES,
   featuredDestination,
   formatPrice,
 } from '../../lib/editorial';
@@ -40,11 +42,18 @@ export default function DiscoverScreen() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [savedByTitle, setSavedByTitle] = useState<Record<string, string>>({});
-  const [customDest, setCustomDest] = useState<{ name: string } | null>(null);
+  const [customDest, setCustomDest] = useState<{ name: string; location: string; description: string } | null>(null);
+  const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [searchPhoto, setSearchPhoto] = useState<string | null>(null);
   const [searchPhotoLoading, setSearchPhotoLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [concierge, setConcierge] = useState<DestinationSuggestion[]>([]);
+  const [conciergeReply, setConciergeReply] = useState<string | null>(null);
+  const [conciergeLoading, setConciergeLoading] = useState(false);
+  const [conciergePhotos, setConciergePhotos] = useState<Record<string, string>>({});
+  const conciergeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const conciergeQueryRef = useRef<string>('');
 
   const hero = useMemo(() => featuredDestination(), []);
 
@@ -145,10 +154,50 @@ export default function DiscoverScreen() {
         d.name.toLowerCase().includes(q) ||
         d.country.toLowerCase().includes(q) ||
         d.region.toLowerCase().includes(q) ||
-        d.tagline.toLowerCase().includes(q);
+        d.tagline.toLowerCase().includes(q) ||
+        d.vibes.some((v) => v.toLowerCase().includes(q) || q.includes(v.toLowerCase()));
       return matchesRegion && matchesQ;
     });
   }, [search, regionFilter]);
+
+  // Concierge: when the collection has little to offer for a query, ask the AI
+  // for recommendations ("trip with my grandma" → real suggestions, not a dead end).
+  useEffect(() => {
+    const q = search.trim();
+    if (conciergeTimerRef.current) clearTimeout(conciergeTimerRef.current);
+    if (!q || q.length < 4 || results.length >= 3) {
+      setConcierge([]);
+      setConciergeReply(null);
+      setConciergeLoading(false);
+      conciergeQueryRef.current = '';
+      return;
+    }
+    if (conciergeQueryRef.current === q) return;
+    setConciergeLoading(true);
+    conciergeTimerRef.current = setTimeout(async () => {
+      conciergeQueryRef.current = q;
+      try {
+        const res = await suggestDestinations(q);
+        // Ignore stale responses
+        if (conciergeQueryRef.current !== q) return;
+        setConcierge(res.suggestions);
+        setConciergeReply(res.reply);
+        res.suggestions.forEach((s) => {
+          fetchDestinationPhoto(s.photoQuery).then((photo) => {
+            if (photo) setConciergePhotos((prev) => ({ ...prev, [s.name]: photo.url }));
+          });
+        });
+      } catch {
+        setConcierge([]);
+        setConciergeReply(null);
+      } finally {
+        if (conciergeQueryRef.current === q) setConciergeLoading(false);
+      }
+    }, 900);
+    return () => {
+      if (conciergeTimerRef.current) clearTimeout(conciergeTimerRef.current);
+    };
+  }, [search, results.length]);
 
   async function handleAddCustom() {
     if (!session || !customDest || adding) return;
@@ -159,8 +208,8 @@ export default function DiscoverScreen() {
         .insert({
           created_by: session.user.id,
           title: customDest.name,
-          destination: customDest.name,
-          cover_photo_url: searchPhoto ?? null,
+          destination: customDest.location ? `${customDest.name}, ${customDest.location}` : customDest.name,
+          cover_photo_url: customPhoto ?? null,
           status: 'idea',
         })
         .select()
@@ -209,7 +258,7 @@ export default function DiscoverScreen() {
           textTransform: 'uppercase',
         }}
       >
-        {dest.toursCount} tours · from {formatPrice(dest.fromPrice)}
+        {dest.vibes[0]} · est. {formatPrice(dest.estDailyCost)} / day
       </Text>
     );
   }
@@ -280,6 +329,37 @@ export default function DiscoverScreen() {
             ) : null}
           </View>
         </View>
+
+        {/* Vibe chips — search by the kind of trip, not just the place */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingTop: 4, paddingBottom: 6 }}
+        >
+          {VIBES.map((vibe) => {
+            const active = search.trim().toLowerCase() === vibe.toLowerCase();
+            return (
+              <Pressable
+                key={vibe}
+                onPress={() => setSearch(active ? '' : vibe)}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 100,
+                  borderWidth: 1,
+                  borderColor: active ? '#111' : '#E5E7EB',
+                  backgroundColor: active ? '#111' : 'white',
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                })}
+              >
+                <Text style={{ color: active ? 'white' : '#6B7280', fontSize: 12, fontWeight: '600' }}>
+                  {vibe}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         {searching ? (
           /* ─────────── Search results ─────────── */
@@ -361,9 +441,111 @@ export default function DiscoverScreen() {
                 </Pressable>
               ))}
 
+              {/* Concierge suggestions */}
+              {conciergeLoading ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <ActivityIndicator color="#9CA3AF" size="small" />
+                  <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13 }}>
+                    Consulting the concierge…
+                  </Text>
+                </View>
+              ) : null}
+
+              {concierge.length > 0 ? (
+                <View style={{ gap: 14 }}>
+                  <View>
+                    <View style={{ width: 28, height: 2, backgroundColor: '#111', marginBottom: 10 }} />
+                    <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>
+                      From the concierge
+                    </Text>
+                    {conciergeReply ? (
+                      <Text
+                        style={{
+                          fontFamily: SERIF,
+                          fontStyle: 'italic',
+                          color: '#6B7280',
+                          fontSize: 13.5,
+                          lineHeight: 20,
+                          marginTop: 6,
+                        }}
+                      >
+                        {conciergeReply}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {concierge.map((s) => (
+                    <Pressable
+                      key={s.name}
+                      onPress={() => {
+                        setCustomPhoto(conciergePhotos[s.name] ?? null);
+                        setCustomDest({ name: s.name, location: s.country, description: s.blurb });
+                      }}
+                      style={({ pressed }) => ({
+                        height: 132,
+                        borderRadius: 18,
+                        overflow: 'hidden',
+                        backgroundColor: '#E9EAEC',
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                      })}
+                    >
+                      {conciergePhotos[s.name] ? (
+                        <Image
+                          source={{ uri: conciergePhotos[s.name] }}
+                          style={{ width: '100%', height: '100%' }}
+                          contentFit="cover"
+                          transition={300}
+                        />
+                      ) : (
+                        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                          <ActivityIndicator color="#9CA3AF" size="small" />
+                        </View>
+                      )}
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.75)']}
+                        locations={[0.1, 1]}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                      />
+                      <View style={{ position: 'absolute', left: 16, right: 16, bottom: 14 }}>
+                        <Text style={{ fontFamily: SERIF, color: 'white', fontSize: 20 }}>
+                          {s.name}
+                          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>  {s.country}</Text>
+                        </Text>
+                        <Text
+                          style={{
+                            fontFamily: SERIF,
+                            fontStyle: 'italic',
+                            color: 'rgba(255,255,255,0.85)',
+                            fontSize: 12,
+                            marginTop: 3,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {s.blurb}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+
               {/* Custom destination card */}
               <Pressable
-                onPress={() => setCustomDest({ name: search.trim() })}
+                onPress={() => {
+                  setCustomPhoto(searchPhoto);
+                  setCustomDest({
+                    name: search.trim(),
+                    location: '',
+                    description:
+                      'Add this destination to your wishlist and start shaping the journey — hotels, food, activities, and the places only locals know.',
+                  });
+                }}
                 style={({ pressed }) => ({
                   height: 96,
                   borderRadius: 18,
@@ -579,16 +761,15 @@ export default function DiscoverScreen() {
           customDest
             ? {
                 name: customDest.name,
-                location: '',
-                description:
-                  'Add this destination to your bucket list and start shaping the journey — hotels, food, activities, and the places only locals know.',
+                location: customDest.location,
+                description: customDest.description,
                 rating: '—',
                 bestTime: '—',
                 days: '—',
               }
             : null
         }
-        photoUrl={searchPhoto}
+        photoUrl={customPhoto}
         visible={!!customDest}
         onClose={() => setCustomDest(null)}
         onAdd={handleAddCustom}

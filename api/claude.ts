@@ -61,25 +61,97 @@ const BUILD_ITINERARY_TOOL = {
           type: 'object',
           properties: {
             day: { type: 'number' },
+            title: { type: 'string', description: "Short evocative day title, e.g. 'Into the caldera'." },
             summary: { type: 'string' },
+            estCostPerPersonUsd: {
+              type: 'number',
+              description: 'Rough per-person cost for this day in USD (lodging + food + activities), rounded.',
+            },
             items: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
                   title: { type: 'string' },
-                  category: { type: 'string', enum: ['hotel', 'restaurant', 'activity'] },
+                  category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
                   description: { type: 'string' },
                 },
                 required: ['title', 'category', 'description'],
               },
             },
           },
-          required: ['day', 'summary', 'items'],
+          required: ['day', 'title', 'summary', 'estCostPerPersonUsd', 'items'],
         },
       },
     },
     required: ['flightEstimate', 'days'],
+  },
+};
+
+const REFINE_ITINERARY_TOOL = {
+  name: 'refine_itinerary',
+  description: "Reply to the traveler's request and return the complete updated day-by-day itinerary.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      reply: {
+        type: 'string',
+        description: 'A short, warm reply (1-3 sentences) explaining what you changed or answering their question.',
+      },
+      days: {
+        type: 'array',
+        description: 'The FULL updated itinerary — every day, including unchanged ones.',
+        items: {
+          type: 'object',
+          properties: {
+            day: { type: 'number' },
+            title: { type: 'string' },
+            summary: { type: 'string' },
+            estCostPerPersonUsd: { type: 'number' },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
+                  description: { type: 'string' },
+                },
+                required: ['title', 'category', 'description'],
+              },
+            },
+          },
+          required: ['day', 'title', 'summary', 'estCostPerPersonUsd', 'items'],
+        },
+      },
+    },
+    required: ['reply', 'days'],
+  },
+};
+
+const HIGHLIGHTS_TOOL = {
+  name: 'destination_highlights',
+  description: 'Provide editorial highlights and local secrets for a destination.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      highlights: {
+        type: 'array',
+        minItems: 3,
+        maxItems: 5,
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: "Short evocative title, e.g. 'The caldera at golden hour'." },
+            blurb: { type: 'string', description: '1-2 sentences, editorial magazine tone, specific not generic.' },
+            photoQuery: { type: 'string', description: '3-5 word photo search query for this highlight.' },
+            secret: { type: 'boolean', description: 'true if this is a lesser-known local secret rather than a marquee sight.' },
+          },
+          required: ['title', 'blurb', 'photoQuery', 'secret'],
+        },
+      },
+    },
+    required: ['highlights'],
   },
 };
 
@@ -223,13 +295,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (mode === 'itinerary') {
-      const { destination, country, departureCity, travelTiming, interests } = req.body;
+      const { destination, country, departureCity, travelTiming, interests, days, season, travelers } = req.body;
       if (!destination || typeof destination !== 'string') {
         res.status(400).json({ error: 'destination is required' });
         return;
       }
       const userText = [
         `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        typeof days === 'number' ? `Trip length: exactly ${days} days` : null,
+        season ? `Time of year: ${season}` : null,
+        typeof travelers === 'number' ? `Travelers: ${travelers}` : null,
         departureCity ? `Flying from: ${departureCity}` : null,
         travelTiming ? `Travel timing: ${travelTiming}` : null,
         interests ? `Interests / notes: ${interests}` : null,
@@ -238,13 +313,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .join('\n');
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
-          'Given a chosen destination and the traveler\'s preferences, build a realistic day-by-day itinerary ' +
-          '(3-7 days unless the timing implies otherwise) mixing hotels, restaurants, and activities. Also give ' +
-          'a rough round-trip flight cost estimate based on general knowledge — always caveat it as a rough, ' +
-          'non-live estimate, not real-time pricing.',
+        'You are a well-traveled trip-planning assistant for a travel app called Wanderlist. ' +
+          "Given a chosen destination and the traveler's preferences, build a realistic day-by-day itinerary " +
+          '(honor the requested trip length exactly; otherwise 3-7 days) mixing accommodation, food, activities ' +
+          'and sightseeing. Give each day a short evocative title and a rough per-person daily cost in USD ' +
+          '(lodging + food + activities, mid-range unless preferences imply otherwise). Also give a rough ' +
+          'round-trip flight cost estimate based on general knowledge — always caveat it as a rough, non-live ' +
+          'estimate, not real-time pricing. Season matters: tailor activities to the stated time of year.',
         userText,
         BUILD_ITINERARY_TOOL
+      );
+      res.status(200).json(result);
+      return;
+    }
+
+    if (mode === 'refine') {
+      const { destination, country, days, season, travelers, itinerary, message, history } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!message || typeof message !== 'string') {
+        res.status(400).json({ error: 'message is required' });
+        return;
+      }
+      if (!Array.isArray(itinerary) || itinerary.length === 0) {
+        res.status(400).json({ error: 'itinerary is required and must be non-empty' });
+        return;
+      }
+
+      const priorMessages: ClaudeMessage[] = Array.isArray(history)
+        ? history
+            .filter(
+              (m: unknown): m is { role: string; text: string } =>
+                !!m &&
+                typeof m === 'object' &&
+                ((m as { role?: unknown }).role === 'user' || (m as { role?: unknown }).role === 'assistant') &&
+                typeof (m as { text?: unknown }).text === 'string'
+            )
+            .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text }))
+            .slice(-8)
+        : [];
+
+      const context = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        typeof days === 'number' ? `Trip length: ${days} days (keep it exactly this length unless asked)` : null,
+        season ? `Time of year: ${season}` : null,
+        typeof travelers === 'number' ? `Travelers: ${travelers}` : null,
+        `Current itinerary JSON:\n${JSON.stringify(itinerary)}`,
+        `Traveler's request: ${message}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      const result = await callClaude(
+        'You are a well-traveled trip-planning assistant for a travel app called Wanderlist, refining a ' +
+          'day-by-day itinerary together with the traveler. They may ask to change things, add interests, or ' +
+          'ask questions. Always return the COMPLETE updated itinerary (every day, same shape, updated ' +
+          'estCostPerPersonUsd per day) — if their message is only a question, answer in the reply and return ' +
+          'the itinerary unchanged. Keep changes surgical: preserve days they have not asked you to touch.',
+        [...priorMessages, { role: 'user', content: context }],
+        REFINE_ITINERARY_TOOL
+      );
+      res.status(200).json(result);
+      return;
+    }
+
+    if (mode === 'highlights') {
+      const { destination, country } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      const result = await callClaude(
+        'You write for the editorial travel magazine Wanderlist. For the given destination, provide 3-5 ' +
+          '"highlights & local secrets": a mix of marquee experiences done the insider way and genuinely ' +
+          'lesser-known local spots. Magazine tone — specific, sensory, never generic. Mark the lesser-known ' +
+          'entries with secret: true.',
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        HIGHLIGHTS_TOOL
       );
       res.status(200).json(result);
       return;
@@ -368,7 +515,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

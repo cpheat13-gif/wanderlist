@@ -14,6 +14,26 @@ export interface Trip {
   status: TripStatus;
   start_date: string | null;
   end_date: string | null;
+  travelers: number | null;
+  season: string | null;
+  est_cost_per_person: number | null;
+  created_at: string;
+}
+
+export interface ItineraryActivity {
+  title: string;
+  category: PlaceCategory;
+  description: string;
+}
+
+export interface ItineraryDayRow {
+  id: string;
+  trip_id: string;
+  day_number: number;
+  title: string;
+  summary: string;
+  activities: ItineraryActivity[];
+  est_cost: number | null;
   created_at: string;
 }
 

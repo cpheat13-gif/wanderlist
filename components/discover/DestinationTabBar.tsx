@@ -1,8 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
 
-export type DestinationTab = 'explorer' | 'flights' | 'chat';
+export type DestinationTab = 'itinerary' | 'explorer' | 'flights' | 'chat';
 
 const TABS: { key: DestinationTab; label: string; glyph: string }[] = [
+  { key: 'itinerary', label: 'Itinerary', glyph: '☰' },
   { key: 'explorer', label: 'Explore', glyph: '⊙' },
   { key: 'flights', label: 'Flights', glyph: '✈︎' },
   { key: 'chat', label: 'Chat', glyph: '✉' },
@@ -11,13 +12,16 @@ const TABS: { key: DestinationTab; label: string; glyph: string }[] = [
 export function DestinationTabBar({
   active,
   onChange,
+  showItinerary = false,
 }: {
   active: DestinationTab;
   onChange: (tab: DestinationTab) => void;
+  showItinerary?: boolean;
 }) {
+  const tabs = showItinerary ? TABS : TABS.filter((t) => t.key !== 'itinerary');
   return (
     <View className="absolute left-5 right-5 bottom-6 flex-row bg-white rounded-full px-2 py-2 shadow-lg">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.key === active;
         return (
           <Pressable

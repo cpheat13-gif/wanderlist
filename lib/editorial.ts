@@ -10,6 +10,13 @@ export interface Review {
   text: string;
 }
 
+export interface Highlight {
+  title: string;
+  blurb: string;
+  photoQuery: string;
+  secret: boolean;
+}
+
 export interface EditorialDestination {
   slug: string;
   name: string;
@@ -22,6 +29,10 @@ export interface EditorialDestination {
   fromPrice: number;
   intro: string;
   facts: { season: string; language: string; currency: string; tripLength: string };
+  vibes: string[];
+  // Rough per-person, per-day estimate in USD — powers the running trip estimate.
+  estDailyCost: number;
+  highlights: Highlight[];
   rating: number;
   reviewCount: number;
   // Percentage distribution for 5★ → 1★
@@ -29,32 +40,17 @@ export interface EditorialDestination {
   reviews: Review[];
 }
 
-export interface TourDay {
-  title: string;
-  activities: string[];
-  meals: string;
-  stay: string;
-}
-
-export interface TourAddOn {
-  id: string;
-  label: string;
-  detail: string;
-  price: number;
-}
-
-export interface Tour {
-  slug: string;
-  destinationSlug: string;
-  title: string;
-  subtitle: string;
-  price: number;
-  durationDays: number;
-  groupSize: string;
-  included: string[];
-  addOns: TourAddOn[];
-  days: TourDay[];
-}
+export const VIBES = [
+  'Hiking',
+  'Beach',
+  'Friends trip',
+  'Honeymoon',
+  'Food & wine',
+  'Adventure',
+  'Culture',
+  'Wildlife',
+  'Relaxation',
+] as const;
 
 export const REGIONS = [
   'The Mediterranean',
@@ -83,6 +79,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'A crescent of volcanic cliffs rising a thousand feet from the Aegean, Santorini is Greece distilled to its essentials — white villages balanced on the caldera rim, vineyards grown in black ash, and evenings that end the same way they have for centuries: everyone facing west, waiting for the sun to fall into the sea.',
     facts: { season: 'May – Oct', language: 'Greek', currency: 'Euro (€)', tripLength: '5–7 days' },
+    vibes: ['Honeymoon', 'Beach', 'Food & wine', 'Relaxation'],
+    estDailyCost: 240,
+    highlights: [
+      { title: 'The caldera at golden hour', blurb: 'Skip the Oia scrum — locals watch the sunset from the castle ruins at Akrotiri or a rim-side table in Imerovigli, where the light is identical and the crowd is not.', photoQuery: 'Santorini Imerovigli caldera sunset view', secret: false },
+      { title: 'Wine grown in volcanic ash', blurb: 'Assyrtiko vines here are trained into ground-hugging baskets against the wind. The tasting rooms at Venetsanos hang right off the caldera cliff.', photoQuery: 'Santorini vineyard basket vines volcanic', secret: false },
+      { title: 'The Fira → Oia rim walk', blurb: 'Three hours along the caldera edge through Firostefani and Imerovigli. Start at 7am with a spanakopita and you will have it nearly to yourself.', photoQuery: 'Santorini caldera trail walk white village', secret: true },
+      { title: 'Ammoudi Bay tavernas', blurb: 'Descend the 300 steps below Oia to red-cliff docks where octopus dries on lines and you swim off the rocks between courses.', photoQuery: 'Ammoudi Bay Santorini taverna octopus harbor', secret: true },
+    ],
     rating: 4.9,
     reviewCount: 214,
     ratingDist: [82, 13, 3, 1, 1],
@@ -110,6 +114,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'Thirty miles of vertical Italy, where pastel villages spill down cliffs into a turquoise sea. Lemons grow the size of grapefruits, every hairpin turn reveals another postcard, and lunch is never less than two hours. The Amalfi Coast does not do understatement — and after a day here, neither will you.',
     facts: { season: 'Apr – Jun, Sep', language: 'Italian', currency: 'Euro (€)', tripLength: '5–8 days' },
+    vibes: ['Honeymoon', 'Food & wine', 'Beach', 'Culture'],
+    estDailyCost: 260,
+    highlights: [
+      { title: 'Path of the Gods at sunrise', blurb: 'The cliff trail from Bomerano to Nocelle floats 500 meters above the sea. At 6:30am it is silent, cool, and entirely yours.', photoQuery: 'Path of the Gods Amalfi cliff trail sea view', secret: false },
+      { title: 'Ravello above the crowds', blurb: 'A thousand feet over the coast, Villa Rufolo hosts chamber concerts on a terrace Wagner once wandered. Evenings here are the coast at its most composed.', photoQuery: 'Ravello Villa Rufolo terrace garden concert', secret: false },
+      { title: 'The Furore fjord', blurb: 'A slit in the cliffs where a fishing hamlet hides under the highway bridge. Boats slip in for a swim stop that most drivers pass without ever seeing.', photoQuery: 'Furore fjord Amalfi hidden beach bridge', secret: true },
+      { title: 'Lemon-terrace lunches', blurb: 'Above Minori, farm families serve lunch under pergolas of sfusato lemons — the tour is the orchard, the menu is whatever was picked that morning.', photoQuery: 'Amalfi lemon grove pergola farm lunch', secret: true },
+    ],
     rating: 4.8,
     reviewCount: 186,
     ratingDist: [76, 17, 4, 2, 1],
@@ -137,6 +149,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'While its louder sisters filled with clubs and crowds, Menorca stayed quiet — a UNESCO biosphere of hidden calas, whitewashed fishing villages, and a 115-mile coastal path that circles the entire island. This is the Mediterranean as it was: slow mornings, gin at noon, and water so clear boats look like they float on air.',
     facts: { season: 'May – Oct', language: 'Spanish, Catalan', currency: 'Euro (€)', tripLength: '4–6 days' },
+    vibes: ['Beach', 'Relaxation', 'Friends trip', 'Hiking'],
+    estDailyCost: 190,
+    highlights: [
+      { title: 'The Camí de Cavalls', blurb: 'A 185km horse-patrol path rings the whole island. Walk any southern section and you fall into a rhythm: pine forest, white cala, swim, repeat.', photoQuery: 'Cami de Cavalls Menorca coastal path cala', secret: false },
+      { title: 'Cala Turqueta before ten', blurb: 'The postcard cove earns its name, but only early. Anchor-light sand, water like glass, and gin from a thermos if you have been here before.', photoQuery: 'Cala Turqueta Menorca turquoise cove', secret: false },
+      { title: 'Kayaking the north caves', blurb: 'The tramuntana coast hides sea caves you can paddle straight into — cathedral light, echoing drips, and not another boat in sight.', photoQuery: 'Menorca sea cave kayak north coast', secret: true },
+      { title: 'Es Caló Blanc at dusk', blurb: 'A concrete swim platform in a fishing hamlet where locals bring wine, jump off the rocks, and stay until the light goes violet.', photoQuery: 'Menorca rocky swim cove sunset locals', secret: true },
+    ],
     rating: 4.8,
     reviewCount: 97,
     ratingDist: [78, 16, 4, 1, 1],
@@ -166,6 +186,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'On Bali, devotion is architecture. Offerings appear on every doorstep by dawn, temples crown every hill, and the island’s famous rice terraces are two thousand years of engineering disguised as art. Between the jungle spas of Ubud and the surf breaks of Uluwatu lies more variety than most countries manage.',
     facts: { season: 'Apr – Oct', language: 'Indonesian, Balinese', currency: 'Rupiah (Rp)', tripLength: '7–12 days' },
+    vibes: ['Friends trip', 'Beach', 'Culture', 'Relaxation', 'Adventure'],
+    estDailyCost: 110,
+    highlights: [
+      { title: 'Sidemen valley, the old Bali', blurb: 'An hour east of Ubud, rice terraces run unbroken to Mount Agung and homestay hosts still ask you in for coffee. This is the island before the feeds found it.', photoQuery: 'Sidemen valley Bali rice terraces Mount Agung', secret: false },
+      { title: 'Uluwatu’s kecak fire dance', blurb: 'A hundred chanting voices, a clifftop amphitheater, and the sun falling into the Indian Ocean mid-performance. Arrive an hour early for the good stone seats.', photoQuery: 'Uluwatu kecak dance sunset cliff Bali', secret: false },
+      { title: 'Dawn at Tirta Gangga', blurb: 'The water palace opens at 6am. For one hour the koi ponds and stepping stones belong to you and the offering-carriers.', photoQuery: 'Tirta Gangga water palace Bali dawn', secret: true },
+      { title: 'Warung Babi Guling Ibu Oka rivals', blurb: 'Skip the famous name — the roadside babi guling stands outside Gianyar market serve the crispier, spicier version locals actually queue for.', photoQuery: 'Bali warung local food market babi guling', secret: true },
+    ],
     rating: 4.8,
     reviewCount: 342,
     ratingDist: [75, 18, 4, 2, 1],
@@ -193,6 +221,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'At dawn in Luang Prabang, hundreds of monks walk silently through the mist to collect alms, as they have every morning for six hundred years. This UNESCO-protected peninsula where the Mekong meets the Khan is Southeast Asia’s most graceful town — French colonial villas, gilded temples, and nights that end early and well.',
     facts: { season: 'Nov – Mar', language: 'Lao', currency: 'Kip (₭)', tripLength: '3–5 days' },
+    vibes: ['Culture', 'Relaxation', 'Food & wine'],
+    estDailyCost: 90,
+    highlights: [
+      { title: 'Tak bat, done respectfully', blurb: 'The dawn alms procession is sacred, not a photo op. Kneel, keep distance, offer sticky rice bought from the morning market — and it becomes the most moving hour of your trip.', photoQuery: 'Luang Prabang monks alms dawn saffron', secret: false },
+      { title: 'Kuang Si’s upper pools', blurb: 'Everyone swims the lower falls. Climb the muddy trail to the top and there is a quiet spring-fed pool above the cascade with a rope swing and no one on it.', photoQuery: 'Kuang Si waterfall upper pool jungle', secret: true },
+      { title: 'Mekong gold at six', blurb: 'Slow boats drift upriver as the sun drops behind the mountains. A Beerlao on the deck of a converted rice barge is the town’s finest institution.', photoQuery: 'Mekong river sunset boat Luang Prabang', secret: false },
+      { title: 'The storytelling house', blurb: 'Garavek theatre seats thirty. An old man with a khene pipe tells Lao legends in the dark — the best $8 in Southeast Asia.', photoQuery: 'Luang Prabang traditional theater lantern night', secret: true },
+    ],
     rating: 4.9,
     reviewCount: 118,
     ratingDist: [85, 11, 2, 1, 1],
@@ -220,6 +256,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'Legend says a dragon descended here, carving the bay with its tail — and standing on deck at dawn, mist threading between two thousand limestone towers, the legend feels like the more plausible explanation. Sleep aboard a traditional junk, kayak into hidden lagoons, and let the bay rearrange your sense of scale.',
     facts: { season: 'Oct – Apr', language: 'Vietnamese', currency: 'Dong (₫)', tripLength: '2–4 days' },
+    vibes: ['Adventure', 'Friends trip', 'Relaxation'],
+    estDailyCost: 120,
+    highlights: [
+      { title: 'Sail Lan Ha, not the main bay', blurb: 'The southern extension has the same karst drama with a tenth of the boats. Ask for routes through Lan Ha and you trade queues for empty lagoons.', photoQuery: 'Lan Ha Bay karsts empty lagoon boat', secret: true },
+      { title: 'Kayak into Dark & Bright cave', blurb: 'Paddle a low tunnel through the rock and emerge in a sealed lagoon of green silence, monkeys in the cliffs above.', photoQuery: 'Ha Long kayak cave lagoon limestone', secret: false },
+      { title: '5am on deck', blurb: 'Set an alarm. Mist threads the towers, the water goes to mercury, and for an hour the dragon legend feels like reporting.', photoQuery: 'Ha Long Bay dawn mist karst towers', secret: false },
+      { title: 'Cua Van floating village', blurb: 'A sampan rowed by a fourth-generation fisherwoman winds between houses on rafts. Go with the coffee ladies at first light before tour hours.', photoQuery: 'Cua Van floating village sampan Vietnam', secret: true },
+    ],
     rating: 4.7,
     reviewCount: 205,
     ratingDist: [70, 20, 6, 3, 1],
@@ -249,6 +293,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'There is weather, and then there is Patagonian weather — four seasons before lunch, winds that name themselves, and light so sharp it feels edited. Torres del Paine is the payoff: three granite towers over a turquoise lake, glaciers calving into grey water, and guanacos posing on the steppe like they know.',
     facts: { season: 'Nov – Mar', language: 'Spanish', currency: 'Peso (CLP)', tripLength: '5–8 days' },
+    vibes: ['Hiking', 'Adventure', 'Wildlife'],
+    estDailyCost: 320,
+    highlights: [
+      { title: 'Base of the Towers at first light', blurb: 'The final moraine scramble in the dark, then granite igniting red over the lake. The hardest sunrise you will ever earn, and the one you will describe forever.', photoQuery: 'Torres del Paine towers sunrise red granite', secret: false },
+      { title: 'Puma country with a tracker', blurb: 'The steppe east of the park holds the densest puma population on Earth. Local trackers read scrapes and guanaco alarm calls like headlines.', photoQuery: 'puma Patagonia steppe wildlife tracking', secret: false },
+      { title: 'Mirador Cuernos at wind-hour', blurb: 'Late afternoon, when the wind makes the lake smoke, the Cuernos turn violet above Nordenskjöld. Ten minutes off the road, and somehow always empty.', photoQuery: 'Cuernos del Paine lake wind Patagonia', secret: true },
+      { title: 'Calafate sours at the refugio', blurb: 'The berry that names the region makes the pisco sour purple. Tradition says one sip guarantees your return to Patagonia. Order two.', photoQuery: 'calafate berry pisco sour Patagonia lodge', secret: true },
+    ],
     rating: 4.9,
     reviewCount: 153,
     ratingDist: [86, 10, 2, 1, 1],
@@ -276,6 +328,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'Argentina’s trekking capital is a village of two thousand people at the foot of one of Earth’s most dramatic skylines. No entrance fees, no shuttle buses — trails leave straight from the bakery. When Fitz Roy’s granite spear catches first light and turns rose-gold, the entire town is already on the trail watching.',
     facts: { season: 'Nov – Mar', language: 'Spanish', currency: 'Peso (ARS)', tripLength: '4–6 days' },
+    vibes: ['Hiking', 'Adventure'],
+    estDailyCost: 250,
+    highlights: [
+      { title: 'Laguna de los Tres', blurb: 'The full-day pilgrimage to Fitz Roy’s feet: forest, river flats, then a brutal final hour to a turquoise lake under a granite wall. The town bakery opens at 6 for a reason.', photoQuery: 'Laguna de los Tres Fitz Roy turquoise lake', secret: false },
+      { title: 'Trailheads from the bakery door', blurb: 'No park gates, no shuttles. Buy two empanadas at La Wafleria, turn left, and you are on the Laguna Torre trail in eight minutes.', photoQuery: 'El Chalten village street Fitz Roy view', secret: false },
+      { title: 'Loma del Pliegue Tumbado', blurb: 'The viewpoint nobody does: a half-day climb that frames Fitz Roy AND Cerro Torre in one panorama. Condors ride the ridge lift at your eye level.', photoQuery: 'Loma del Pliegue Tumbado panorama Fitz Roy Cerro Torre', secret: true },
+      { title: 'The 4pm schnitzel rule', blurb: 'La Cervecería fills by five with trekkers off the trails. Arrive at four, order the milanesa and a pint of their bock, and watch the limping parade arrive.', photoQuery: 'El Chalten craft brewery mountain town', secret: true },
+    ],
     rating: 4.9,
     reviewCount: 121,
     ratingDist: [84, 12, 2, 1, 1],
@@ -303,6 +363,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'The driest place on Earth is also one of the strangest and most beautiful: salt lakes pink with flamingos, geysers erupting at dawn at 14,000 feet, valleys so lunar NASA tests rovers here. And at night — the clearest skies on the planet, where the Milky Way casts an actual shadow.',
     facts: { season: 'Mar – May, Sep – Nov', language: 'Spanish', currency: 'Peso (CLP)', tripLength: '4–5 days' },
+    vibes: ['Adventure', 'Hiking', 'Wildlife'],
+    estDailyCost: 280,
+    highlights: [
+      { title: 'The clearest sky on Earth', blurb: 'Zero humidity, 2,400 meters, no light for a hundred miles. Through a telescope here, Saturn’s rings look hand-drawn. Book the astronomy night first, everything else second.', photoQuery: 'Atacama night sky milky way telescope', secret: false },
+      { title: 'El Tatio at daybreak', blurb: 'Eighty geysers steam against the dawn cold at 4,300 meters. The columns collapse as the sun warms the air — by nine it is over.', photoQuery: 'El Tatio geysers dawn steam Atacama', secret: false },
+      { title: 'Vallecito’s hidden dunes', blurb: 'Everyone photographs Valle de la Luna. The dune field one valley over is just as lunar, free to enter, and empty enough to hear sand slide.', photoQuery: 'Atacama desert dunes empty valley', secret: true },
+      { title: 'Toconao’s quince empanadas', blurb: 'The white-adobe village by the salt flat has a wood-oven bakery whose quince empanadas sell out by noon. Eat them in the shaded plaza with the church bells.', photoQuery: 'Toconao village adobe church Atacama', secret: true },
+    ],
     rating: 4.8,
     reviewCount: 134,
     ratingDist: [79, 15, 4, 1, 1],
@@ -332,6 +400,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'Marrakech does not ease you in. The medina is a labyrinth of spice pyramids, hammering coppersmiths, and mint tea poured from a height — then a riad door closes behind you and everything goes quiet: a courtyard, a fountain, orange trees. The city’s genius is this rhythm of chaos and calm, repeated daily for a thousand years.',
     facts: { season: 'Oct – Apr', language: 'Arabic, French', currency: 'Dirham (MAD)', tripLength: '3–5 days' },
+    vibes: ['Culture', 'Food & wine', 'Friends trip', 'Adventure'],
+    estDailyCost: 140,
+    highlights: [
+      { title: 'Jemaa el-Fnaa after dark', blurb: 'At dusk the square becomes a thousand-year-old festival: snail carts, gnawa drummers, storytellers. Eat at stall 31 where the grill smoke is thickest.', photoQuery: 'Jemaa el-Fnaa night market smoke Marrakech', secret: false },
+      { title: 'The quiet of a riad', blurb: 'The medina’s genius is the door that closes. Behind it: a courtyard, a fountain, orange trees, silence. Choose your riad like you would a hotel room with a soul.', photoQuery: 'Marrakech riad courtyard fountain tiles', secret: false },
+      { title: 'Le Jardin Secret’s tower', blurb: 'Everyone queues for Majorelle. This restored palace garden in the medina has an Islamic-geometry paradise garden and a tower view over the rooftops — usually shared with pigeons only.', photoQuery: 'Le Jardin Secret Marrakech garden tower', secret: true },
+      { title: 'Amal, lunch that matters', blurb: 'A women’s training center in Gueliz serving Friday couscous that outclasses the palaces. Book a cooking class and your teacher becomes your friend.', photoQuery: 'Moroccan couscous tagine home cooking', secret: true },
+    ],
     rating: 4.7,
     reviewCount: 228,
     ratingDist: [72, 19, 5, 3, 1],
@@ -359,6 +435,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'Zanzibar smells like cloves and salt. This is the island where Swahili, Arab, Indian, and Portuguese worlds met and married — wander Stone Town’s carved-door alleys in the morning, sail a dhow to a vanishing sandbank by afternoon, and eat grilled octopus under string lights as the muezzin and the tide call at once.',
     facts: { season: 'Jun – Oct', language: 'Swahili, English', currency: 'Shilling (TZS)', tripLength: '5–7 days' },
+    vibes: ['Beach', 'Honeymoon', 'Culture', 'Relaxation'],
+    estDailyCost: 180,
+    highlights: [
+      { title: 'A dhow to a vanishing island', blurb: 'Sail at morning tide to a sandbank that exists for six hours a day. Grilled lobster, an umbrella, and the Indian Ocean rising slowly around your lunch.', photoQuery: 'Zanzibar sandbank dhow lunch turquoise', secret: false },
+      { title: 'Stone Town’s carved doors', blurb: 'Four centuries of Swahili, Arab, Indian and Portuguese lives are carved into these studded doors. Walk with a scholar; the alleys are an archive.', photoQuery: 'Stone Town Zanzibar carved door alley', secret: false },
+      { title: 'Forodhani after the tourists eat', blurb: 'The night market’s first wave is for visitors. Return at 9:30 when families arrive — urojo soup, sugarcane juice pressed by bicycle, and honest prices.', photoQuery: 'Forodhani night market Zanzibar food stalls', secret: true },
+      { title: 'The Rock’s low-tide walk', blurb: 'The famous restaurant sits on a tidal boulder — but the real move is the shoreline walk from Pingwe at low tide, seaweed farms strung like gardens underwater.', photoQuery: 'Zanzibar low tide seaweed farm shore walk', secret: true },
+    ],
     rating: 4.7,
     reviewCount: 142,
     ratingDist: [71, 20, 5, 3, 1],
@@ -386,6 +470,14 @@ export const DESTINATIONS: EditorialDestination[] = [
     intro:
       'T.E. Lawrence called it “vast, echoing and God-like,” and Hollywood keeps casting it as Mars — but Wadi Rum’s best trick is silence. After the jeeps park and the sun drops behind the sandstone, you eat lamb cooked underground in a Bedouin camp, and the sky performs. No filter has ever done it justice.',
     facts: { season: 'Mar – May, Sep – Nov', language: 'Arabic', currency: 'Dinar (JOD)', tripLength: '2–3 days' },
+    vibes: ['Adventure', 'Culture', 'Hiking'],
+    estDailyCost: 200,
+    highlights: [
+      { title: 'The silence after the jeeps', blurb: 'Day tours leave by five. Stay the night and the desert exhales: sandstone goes ember-red, the wind stops, and the loudest thing is your own pulse.', photoQuery: 'Wadi Rum sunset red cliffs silence', secret: false },
+      { title: 'Zarb, dinner from the earth', blurb: 'Lamb and vegetables buried over coals for hours, unearthed like treasure at a Bedouin camp. The reveal is theater; the eating is better.', photoQuery: 'Bedouin zarb dinner camp fire Wadi Rum', secret: false },
+      { title: 'Jebel Burdah rock bridge', blurb: 'A guided scramble to a sandstone arch a hundred meters up. Half climbing, half hiking, all worth it for the summit photo your knees will remember.', photoQuery: 'Burdah rock bridge arch Wadi Rum climb', secret: true },
+      { title: 'Lawrence’s spring at dawn', blurb: 'A short camel ride to a fig-shaded spring in the cliff face. Fill your tea from the source and watch the valley floor light up below.', photoQuery: 'Lawrence spring Wadi Rum cliff fig tree', secret: true },
+    ],
     rating: 4.9,
     reviewCount: 167,
     ratingDist: [87, 9, 2, 1, 1],
@@ -397,283 +489,8 @@ export const DESTINATIONS: EditorialDestination[] = [
   },
 ];
 
-export const TOURS: Tour[] = [
-  {
-    slug: 'santorini-signature',
-    destinationSlug: 'santorini',
-    title: 'Caldera & Vine',
-    subtitle: 'Villages, volcanic wine, and one perfect sail',
-    price: 1450,
-    durationDays: 5,
-    groupSize: 'Max 10',
-    included: ['4 nights cave-house hotel', 'Daily breakfast', 'Catamaran sunset sail', 'Wine tasting × 2', 'Local guide throughout'],
-    addOns: [
-      { id: 'photo', label: 'Golden-hour photo session', detail: '90 min with a local photographer in Oia', price: 140 },
-      { id: 'cooking', label: 'Cycladic cooking class', detail: 'Tomato fritters, fava & wine on a family farm', price: 95 },
-      { id: 'transfer', label: 'Private airport transfers', detail: 'Both directions', price: 60 },
-    ],
-    days: [
-      { title: 'Arrival & the rim at dusk', activities: ['Check in above the caldera', 'Orientation walk through Fira', 'Sunset aperitivo on the rim'], meals: 'D', stay: 'Cave hotel, Fira' },
-      { title: 'Oia the right way', activities: ['Dawn walk before the crowds', 'Maritime museum & castle point', 'Free afternoon & pool time'], meals: 'B', stay: 'Cave hotel, Fira' },
-      { title: 'Ash-soil vineyards', activities: ['Santo Wines & Venetsanos tastings', 'Pyrgos village lunch', 'Ancient Akrotiri ruins'], meals: 'B · L', stay: 'Cave hotel, Fira' },
-      { title: 'On the water', activities: ['Catamaran to the hot springs', 'Swim stops at Red & White beach', 'Sunset sail with dinner aboard'], meals: 'B · D', stay: 'Cave hotel, Fira' },
-      { title: 'Slow morning, farewell', activities: ['Caldera-edge breakfast', 'Optional Imerovigli stroll'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'amalfi-signature',
-    destinationSlug: 'amalfi-coast',
-    title: 'Lemons & Ladders',
-    subtitle: 'Cliff paths, boat coves, and long Italian lunches',
-    price: 1780,
-    durationDays: 6,
-    groupSize: 'Max 12',
-    included: ['5 nights sea-view hotel', 'Daily breakfast', 'Private boat day', 'Path of the Gods guided hike', 'Limoncello farm visit'],
-    addOns: [
-      { id: 'capri', label: 'Capri extension day', detail: 'Blue Grotto & Monte Solaro chairlift', price: 220 },
-      { id: 'cooking', label: 'Pasta with a nonna', detail: 'Hands-on class in a Praiano home', price: 110 },
-      { id: 'transfer', label: 'Private Naples transfers', detail: 'Both directions', price: 130 },
-    ],
-    days: [
-      { title: 'Benvenuti a Positano', activities: ['Arrival & cliffside check-in', 'Passeggiata & spiaggia sunset'], meals: 'D', stay: 'Hotel, Positano' },
-      { title: 'Path of the Gods', activities: ['Sunrise trailhead start', 'Nocelle lemon terrace break', 'Afternoon swim & rest'], meals: 'B · L', stay: 'Hotel, Positano' },
-      { title: 'The coast by boat', activities: ['Private gozzo along the cliffs', 'Li Galli cove swims', 'Furore fjord photo stop'], meals: 'B · L', stay: 'Hotel, Positano' },
-      { title: 'Amalfi & Ravello', activities: ['Duomo & paper museum', 'Villa Rufolo gardens', 'Evening chamber concert'], meals: 'B', stay: 'Hotel, Positano' },
-      { title: 'Lemon farm & free time', activities: ['Limoncello tasting with the growers', 'Free afternoon — beach or boutiques'], meals: 'B · L', stay: 'Hotel, Positano' },
-      { title: 'Arrivederci', activities: ['Slow breakfast, departure'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'menorca-signature',
-    destinationSlug: 'menorca',
-    title: 'The Quiet Balearic',
-    subtitle: 'Hidden calas by kayak, foot, and sail',
-    price: 1290,
-    durationDays: 5,
-    groupSize: 'Max 8',
-    included: ['4 nights boutique agroturismo', 'Daily breakfast', 'Sea-kayak cave tour', 'Sunset sail', 'Camí de Cavalls guided sections'],
-    addOns: [
-      { id: 'gin', label: 'Xoriguer gin experience', detail: 'Distillery tour & pomada masterclass', price: 55 },
-      { id: 'dive', label: 'Discover scuba dive', detail: 'Marine reserve intro dive, all gear', price: 120 },
-      { id: 'transfer', label: 'Private airport transfers', detail: 'Both directions', price: 50 },
-    ],
-    days: [
-      { title: 'Ciutadella evenings', activities: ['Check-in at the finca', 'Old-town wander & harbor dinner'], meals: 'D', stay: 'Agroturismo, near Ciutadella' },
-      { title: 'South-coast calas', activities: ['Camí de Cavalls: Son Saura → Turqueta', 'Swim stops all day'], meals: 'B · picnic L', stay: 'Agroturismo' },
-      { title: 'By kayak', activities: ['Paddle the north-coast caves', 'Cliff-jump (optional!)', 'Fornells fishing-village lunch'], meals: 'B · L', stay: 'Agroturismo' },
-      { title: 'Island under sail', activities: ['Classic llaüt day sail', 'Sunset with pomada on deck'], meals: 'B · L', stay: 'Agroturismo' },
-      { title: 'Market & farewell', activities: ['Ciutadella market breakfast', 'Departure'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'bali-signature',
-    destinationSlug: 'bali',
-    title: 'Temples & Terraces',
-    subtitle: 'From Ubud’s jungle to Uluwatu’s cliffs',
-    price: 1150,
-    durationDays: 8,
-    groupSize: 'Max 12',
-    included: ['7 nights (jungle lodge + cliff resort)', 'Daily breakfast', 'Private driver-guide', 'Sunrise temple ceremony', 'Balinese massage × 1'],
-    addOns: [
-      { id: 'surf', label: 'Surf lessons × 2', detail: 'Beginner-friendly breaks with local coaches', price: 90 },
-      { id: 'batur', label: 'Mt. Batur sunrise trek', detail: '2am start, volcanic sunrise, hot springs after', price: 75 },
-      { id: 'spa', label: 'Half-day spa ritual', detail: 'Flower bath & traditional boreh wrap', price: 85 },
-    ],
-    days: [
-      { title: 'Into the jungle', activities: ['Arrival, Ubud lodge check-in', 'Campuhan ridge sunset walk'], meals: 'D', stay: 'Jungle lodge, Ubud' },
-      { title: 'Rice & water temples', activities: ['Tegallalang terraces early', 'Tirta Empul purification ritual', 'Craft villages loop'], meals: 'B · L', stay: 'Jungle lodge, Ubud' },
-      { title: 'Sidemen valley', activities: ['Village walk among the paddies', 'Weaving house visit', 'Long slow lunch with a view'], meals: 'B · L', stay: 'Jungle lodge, Ubud' },
-      { title: 'Waterfalls & spa', activities: ['Tibumana & Tukad Cepung falls', 'Afternoon massage', 'Ubud night market'], meals: 'B', stay: 'Jungle lodge, Ubud' },
-      { title: 'Sunrise at the gates', activities: ['Lempuyang “Gates of Heaven” at dawn', 'Tirta Gangga water palace', 'Transfer south'], meals: 'B · L', stay: 'Cliff resort, Uluwatu' },
-      { title: 'Cliffs & kecak', activities: ['Beach morning (Padang Padang)', 'Uluwatu temple at golden hour', 'Kecak fire dance'], meals: 'B', stay: 'Cliff resort, Uluwatu' },
-      { title: 'Island time', activities: ['Free day — surf, spa, or sunbeds', 'Farewell seafood dinner on the sand'], meals: 'B · D', stay: 'Cliff resort, Uluwatu' },
-      { title: 'Selamat jalan', activities: ['Departure transfers'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'luang-prabang-signature',
-    destinationSlug: 'luang-prabang',
-    title: 'Mekong Mornings',
-    subtitle: 'Alms at dawn, waterfalls at noon, river gold at dusk',
-    price: 980,
-    durationDays: 4,
-    groupSize: 'Max 10',
-    included: ['3 nights heritage villa', 'Daily breakfast', 'Private Mekong sunset cruise', 'Kuang Si entrance & picnic', 'Alms ceremony briefing & offerings'],
-    addOns: [
-      { id: 'weaving', label: 'Silk-weaving workshop', detail: 'Half day at a village atelier', price: 45 },
-      { id: 'caves', label: 'Pak Ou caves by boat', detail: 'Thousand-Buddha caves upriver', price: 60 },
-      { id: 'baci', label: 'Private baci ceremony', detail: 'Traditional blessing with a village elder', price: 70 },
-    ],
-    days: [
-      { title: 'Peninsula wandering', activities: ['Check-in, heritage-quarter walk', 'Mount Phousi at sunset', 'Night market graze'], meals: 'D', stay: 'Heritage villa' },
-      { title: 'Dawn alms & waterfalls', activities: ['Tak bat ceremony at first light', 'Kuang Si turquoise pools & picnic', 'Bear rescue sanctuary'], meals: 'B · L', stay: 'Heritage villa' },
-      { title: 'Temples & the river', activities: ['Wat Xieng Thong in the quiet hours', 'Artisan quarter visit', 'Golden-hour Mekong cruise'], meals: 'B', stay: 'Heritage villa' },
-      { title: 'One last coffee', activities: ['Riverside café morning', 'Departure'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'ha-long-signature',
-    destinationSlug: 'ha-long-bay',
-    title: 'Karst & Current',
-    subtitle: 'Two nights aboard among the limestone towers',
-    price: 1080,
-    durationDays: 3,
-    groupSize: 'Max 16',
-    included: ['2 nights premium junk cabin', 'All meals aboard', 'Kayak & lagoon excursions', 'Tai chi at sunrise', 'Hanoi transfers'],
-    addOns: [
-      { id: 'cabin', label: 'Ocean-view suite upgrade', detail: 'Private balcony cabin', price: 180 },
-      { id: 'squid', label: 'Night squid fishing', detail: 'With the crew, from the stern', price: 25 },
-      { id: 'hanoi', label: 'Hanoi old-quarter food walk', detail: 'Evening before embarkation', price: 55 },
-    ],
-    days: [
-      { title: 'Set sail', activities: ['Hanoi pickup, boarding lunch', 'Cruise into Lan Ha bay', 'Kayak a hidden lagoon', 'Sundowners on the top deck'], meals: 'L · D', stay: 'Junk boat cabin' },
-      { title: 'Deep in the bay', activities: ['Sunrise tai chi', 'Floating village by sampan', 'Beach & swim stop', 'Cooking demo & feast'], meals: 'B · L · D', stay: 'Junk boat cabin' },
-      { title: 'Mist & farewell', activities: ['Dawn on deck', 'Surprise cave brunch', 'Return transfer to Hanoi'], meals: 'B · brunch', stay: '—' },
-    ],
-  },
-  {
-    slug: 'torres-signature',
-    destinationSlug: 'torres-del-paine',
-    title: 'The W, Softened',
-    subtitle: 'The classic trek with warm beds and hot meals',
-    price: 2650,
-    durationDays: 6,
-    groupSize: 'Max 8',
-    included: ['5 nights refugio/lodge', 'All meals on trek', 'Certified mountain guides', 'Park fees & catamaran', 'Punta Arenas transfers'],
-    addOns: [
-      { id: 'glacier', label: 'Grey Glacier ice hike', detail: 'Crampons-on glacier walk with guides', price: 190 },
-      { id: 'horseback', label: 'Estancia horseback day', detail: 'Ride with baqueanos, asado lunch', price: 160 },
-      { id: 'single', label: 'Single room upgrade', detail: 'Where lodges allow', price: 240 },
-    ],
-    days: [
-      { title: 'To the end of the world', activities: ['Punta Arenas pickup', 'Steppe drive — guanacos & condors', 'Lodge briefing & gear check'], meals: 'L · D', stay: 'Lodge, park edge' },
-      { title: 'French Valley', activities: ['Catamaran across Pehoé', 'Hike into the valley amphitheater', 'Hanging-glacier lookout'], meals: 'B · L · D', stay: 'Refugio Cuernos' },
-      { title: 'Lakes & wind', activities: ['Nordenskjöld shoreline trek', 'Wildlife tracking with guides'], meals: 'B · L · D', stay: 'Refugio Central' },
-      { title: 'The Towers', activities: ['Pre-dawn start', 'Base-of-the-towers ascent', 'Celebratory dinner'], meals: 'B · L · D', stay: 'Refugio Central' },
-      { title: 'Grey Glacier', activities: ['Boat to the glacier face', 'Icebergs & lookout walk'], meals: 'B · L · D', stay: 'Lodge, park edge' },
-      { title: 'Homeward', activities: ['Slow morning, return transfer'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'chalten-signature',
-    destinationSlug: 'el-chalten',
-    title: 'Fitz Roy on Foot',
-    subtitle: 'Day-hike the classics, sleep in town',
-    price: 2280,
-    durationDays: 5,
-    groupSize: 'Max 10',
-    included: ['4 nights boutique hosteria', 'Daily breakfast & trail lunches', 'Local trekking guides', 'El Calafate transfers', 'Farewell asado'],
-    addOns: [
-      { id: 'perito', label: 'Perito Moreno add-on day', detail: 'Boardwalks + optional mini-trek on the ice', price: 210 },
-      { id: 'massage', label: 'Post-trek massage', detail: '60 min, because Laguna de los Tres', price: 70 },
-      { id: 'single', label: 'Single room upgrade', detail: 'All four nights', price: 180 },
-    ],
-    days: [
-      { title: 'Arrival under the spires', activities: ['Transfer from El Calafate', 'Sunset viewpoint warm-up walk', 'Craft-beer welcome'], meals: 'D', stay: 'Hosteria, El Chaltén' },
-      { title: 'Laguna Capri', activities: ['Shake-out hike to Capri', 'Fitz Roy reflection views', 'Afternoon empanada workshop'], meals: 'B · L', stay: 'Hosteria' },
-      { title: 'The big one', activities: ['Laguna de los Tres full day', 'Dawn start for summit light'], meals: 'B · L', stay: 'Hosteria' },
-      { title: 'Cerro Torre', activities: ['Laguna Torre trail', 'Iceberg-laced lake & glacier views', 'Farewell asado night'], meals: 'B · L · D', stay: 'Hosteria' },
-      { title: 'Departure', activities: ['Bakery run, transfer out'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'atacama-signature',
-    destinationSlug: 'atacama',
-    title: 'High & Dry',
-    subtitle: 'Geysers, salt lakes, moon valleys, deep space',
-    price: 1890,
-    durationDays: 5,
-    groupSize: 'Max 10',
-    included: ['4 nights desert lodge', 'Daily breakfast', 'All excursions & park fees', 'Astronomy night with telescopes', 'Calama transfers'],
-    addOns: [
-      { id: 'sandboard', label: 'Sandboarding session', detail: 'Death Valley dunes, gear included', price: 65 },
-      { id: 'hotair', label: 'Dawn balloon flight', detail: 'Sunrise over the salt flat', price: 320 },
-      { id: 'spa', label: 'Puritama hot springs', detail: 'Private morning slot', price: 90 },
-    ],
-    days: [
-      { title: 'Arrive & acclimatize', activities: ['Lodge check-in (2,400 m)', 'San Pedro village stroll', 'Early night — altitude is real'], meals: 'D', stay: 'Desert lodge' },
-      { title: 'Valley of the Moon', activities: ['Salt caves & dune ridge', 'Sunset over the cordillera'], meals: 'B · picnic D', stay: 'Desert lodge' },
-      { title: 'Salt lakes & flamingos', activities: ['Chaxa lagoon flamingo colonies', 'Toconao village', 'Altiplanic lagoons (4,200 m)'], meals: 'B · L', stay: 'Desert lodge' },
-      { title: 'Geysers at dawn', activities: ['El Tatio field at first light', 'Hot-spring soak', 'Astronomy session after dark'], meals: 'B · L', stay: 'Desert lodge' },
-      { title: 'Descent', activities: ['Slow breakfast, Calama transfer'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'marrakech-signature',
-    destinationSlug: 'marrakech',
-    title: 'Riad & Rhythm',
-    subtitle: 'Souks, gardens, and an Atlas escape',
-    price: 1180,
-    durationDays: 4,
-    groupSize: 'Max 10',
-    included: ['3 nights courtyard riad', 'Daily breakfast', 'Medina food walk', 'Atlas foothills day with lunch', 'Hammam session'],
-    addOns: [
-      { id: 'cooking', label: 'Tagine masterclass', detail: 'Market shop + cook in a dada’s kitchen', price: 80 },
-      { id: 'balloon', label: 'Dawn balloon over the palmeraie', detail: 'With Berber breakfast', price: 280 },
-      { id: 'desert', label: 'Agafay desert dinner', detail: 'Sunset camp, music & fire', price: 120 },
-    ],
-    days: [
-      { title: 'Into the labyrinth', activities: ['Riad check-in & mint tea', 'Guided medina orientation', 'Jemaa el-Fnaa at dusk'], meals: 'D', stay: 'Riad, medina' },
-      { title: 'Souks & gardens', activities: ['Artisan quarters deep-dive', 'Majorelle & YSL museum', 'Rooftop sunset'], meals: 'B', stay: 'Riad, medina' },
-      { title: 'Atlas air', activities: ['Imlil valley walk', 'Berber-home lunch', 'Evening hammam ritual'], meals: 'B · L', stay: 'Riad, medina' },
-      { title: 'Slow farewell', activities: ['Courtyard breakfast', 'Last souk sweep, departure'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'zanzibar-signature',
-    destinationSlug: 'zanzibar',
-    title: 'Dhow & Door',
-    subtitle: 'Stone Town stories and sandbank swims',
-    price: 1520,
-    durationDays: 6,
-    groupSize: 'Max 10',
-    included: ['5 nights (Stone Town + beach)', 'Daily breakfast', 'Dhow sandbank day with lunch', 'Spice farm tour', 'History walk with a local scholar'],
-    addOns: [
-      { id: 'snorkel', label: 'Mnemba atoll snorkel', detail: 'Boat day to the reef', price: 95 },
-      { id: 'cooking', label: 'Swahili cooking class', detail: 'Market visit + family kitchen', price: 70 },
-      { id: 'sunset', label: 'Private sunset dhow', detail: 'Just your group, drinks aboard', price: 130 },
-    ],
-    days: [
-      { title: 'Karibu Stone Town', activities: ['Check-in old quarter', 'Twilight alleys & Forodhani grills'], meals: 'D', stay: 'Boutique hotel, Stone Town' },
-      { title: 'History & spice', activities: ['Scholar-led history walk', 'Spice farm afternoon', 'Rooftop dinner'], meals: 'B · D', stay: 'Stone Town' },
-      { title: 'The sandbank', activities: ['Dhow sail at morning tide', 'Vanishing-island seafood lunch', 'Snorkel the reef edge'], meals: 'B · L', stay: 'Stone Town' },
-      { title: 'To the east coast', activities: ['Transfer to Paje', 'Tide-pool walk & kite-beach sunset'], meals: 'B', stay: 'Beach lodge, Paje' },
-      { title: 'Ocean day', activities: ['Swim, SUP, or hammock', 'Seaweed-farm visit', 'Beach barbecue'], meals: 'B · D', stay: 'Beach lodge, Paje' },
-      { title: 'Kwaheri', activities: ['Ocean breakfast, airport transfer'], meals: 'B', stay: '—' },
-    ],
-  },
-  {
-    slug: 'wadi-rum-signature',
-    destinationSlug: 'wadi-rum',
-    title: 'Valley of the Moon',
-    subtitle: 'Jeeps, dunes, and a night under the Milky Way',
-    price: 1340,
-    durationDays: 3,
-    groupSize: 'Max 8',
-    included: ['2 nights luxury desert camp', 'All meals (incl. zarb dinner)', 'Full-day 4×4 with Bedouin guide', 'Sunrise camel ride', 'Amman/Aqaba transfers'],
-    addOns: [
-      { id: 'bubble', label: 'Stargazer bubble tent', detail: 'Transparent-dome upgrade, both nights', price: 260 },
-      { id: 'climb', label: 'Jebel Burdah arch scramble', detail: 'Guided half-day rock bridge ascent', price: 110 },
-      { id: 'petra', label: 'Petra day extension', detail: 'Full day with licensed guide', price: 190 },
-    ],
-    days: [
-      { title: 'Into the red', activities: ['Desert transfer & camp check-in', 'Sunset from the dunes', 'Zarb dinner unearthed + fireside oud'], meals: 'L · D', stay: 'Luxury camp' },
-      { title: 'Deep desert', activities: ['Full-day 4×4: arches, canyons, inscriptions', 'Tea with a Bedouin family', 'Night-sky session'], meals: 'B · L · D', stay: 'Luxury camp' },
-      { title: 'Camelback dawn', activities: ['Sunrise camel ride', 'Slow breakfast, transfer out'], meals: 'B', stay: '—' },
-    ],
-  },
-];
-
 export function destinationBySlug(slug: string): EditorialDestination | undefined {
   return DESTINATIONS.find((d) => d.slug === slug);
-}
-
-export function tourForDestination(slug: string): Tour | undefined {
-  return TOURS.find((t) => t.destinationSlug === slug);
-}
-
-export function tourBySlug(slug: string): Tour | undefined {
-  return TOURS.find((t) => t.slug === slug);
 }
 
 // Featured destination rotates daily.

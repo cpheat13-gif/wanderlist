@@ -22,7 +22,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="bucket"
         options={{
-          title: 'Bucket List',
+          title: 'Wishlist',
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>♡</Text>,
         }}
       />

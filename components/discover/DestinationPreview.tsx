@@ -179,7 +179,7 @@ export function DestinationPreview({
               <ActivityIndicator color="#111" />
             ) : (
               <Text style={{ color: '#111', fontSize: 15, fontWeight: '700' }}>
-                Add to Bucket List
+                Add to Wishlist
               </Text>
             )}
           </Pressable>

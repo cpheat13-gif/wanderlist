@@ -5,12 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
+import { DESTINATIONS, SERIF } from '../../lib/editorial';
 import { Trip } from '../../lib/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 32 - 12) / 2);
+const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48 - 12) / 2);
 
-export default function BucketScreen() {
+export default function WishlistScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +40,16 @@ export default function BucketScreen() {
   }
 
   function confirmDelete(trip: Trip) {
-    Alert.alert('Remove from Bucket List?', `"${trip.title}" will be permanently deleted.`, [
+    Alert.alert('Remove from wishlist?', `"${trip.title}" will be permanently deleted.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => handleDelete(trip) },
     ]);
+  }
+
+  function openTrip(trip: Trip) {
+    const collection = DESTINATIONS.find((d) => d.name === trip.title);
+    if (collection) router.push(`/destination/${collection.slug}`);
+    else router.push(`/discover/${trip.id}`);
   }
 
   const filtered = trips.filter((t) => {
@@ -55,37 +62,54 @@ export default function BucketScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
-          Bucket{'\n'}List
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
+      {/* Masthead */}
+      <View style={{ paddingHorizontal: 24, paddingTop: 14, paddingBottom: 14 }}>
+        <Text
+          style={{
+            color: '#9CA3AF',
+            fontSize: 10,
+            fontWeight: '700',
+            letterSpacing: 3,
+            textTransform: 'uppercase',
+            marginBottom: 6,
+          }}
+        >
+          Dreams, kept
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 34, color: '#111', letterSpacing: -0.5 }}>
+          Wishlist
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+          Every place that made your heart skip.
         </Text>
       </View>
 
       {/* Search */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14, gap: 10 }}>
+      <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
         <View
           style={{
-            flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: '#F3F4F6',
+            borderWidth: 1,
+            borderColor: '#E5E7EB',
             borderRadius: 100,
-            paddingHorizontal: 16,
+            paddingHorizontal: 18,
             height: 46,
+            backgroundColor: 'white',
           }}
         >
-          <Text style={{ color: '#9CA3AF', fontSize: 15, marginRight: 8 }}>🔍</Text>
+          <Text style={{ color: '#9CA3AF', fontSize: 14, marginRight: 10 }}>⌕</Text>
           <TextInput
             style={{ flex: 1, color: '#111', fontSize: 14 }}
-            placeholder="Search bucket list..."
-            placeholderTextColor="#9CA3AF"
+            placeholder="Search your wishlist…"
+            placeholderTextColor="#B6BAC2"
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 ? (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
-              <Text style={{ color: '#9CA3AF', fontSize: 15 }}>✕</Text>
+            <Pressable onPress={() => setSearch('')} hitSlop={12}>
+              <Text style={{ color: '#9CA3AF', fontSize: 14 }}>✕</Text>
             </Pressable>
           ) : null}
         </View>
@@ -93,40 +117,55 @@ export default function BucketScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#111" />}
       >
         {!loading && filtered.length === 0 ? (
           trips.length === 0 ? (
-            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
-              <Text style={{ fontSize: 44, marginBottom: 14 }}>🗺️</Text>
-              <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
-                Your bucket list is empty
+            <View style={{ alignItems: 'center', marginTop: 56, paddingHorizontal: 20 }}>
+              <Text style={{ fontSize: 40, marginBottom: 16 }}>♡</Text>
+              <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>
+                Nothing saved yet
               </Text>
-              <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
-                Find somewhere that makes your heart race and save it here.
+              <Text
+                style={{
+                  fontFamily: SERIF,
+                  fontStyle: 'italic',
+                  color: '#9CA3AF',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  lineHeight: 22,
+                  marginBottom: 22,
+                }}
+              >
+                Tap the heart on anything in Discover{'\n'}that keeps you up at night.
               </Text>
               <Pressable
                 onPress={() => router.push('/(tabs)/discover')}
                 style={({ pressed }) => ({
-                  backgroundColor: '#059669',
+                  backgroundColor: '#111',
                   borderRadius: 100,
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
+                  paddingHorizontal: 26,
+                  paddingVertical: 13,
                   transform: [{ scale: pressed ? 0.97 : 1 }],
                 })}
               >
-                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>
-                  ✦ Explore destinations
-                </Text>
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>✦ Browse the atlas</Text>
               </Pressable>
             </View>
           ) : (
-            <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <Text style={{ color: '#9CA3AF', fontSize: 15, textAlign: 'center', lineHeight: 24 }}>
-                No trips match your search.
-              </Text>
-            </View>
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                color: '#9CA3AF',
+                fontSize: 14,
+                textAlign: 'center',
+                marginTop: 48,
+              }}
+            >
+              Nothing on your wishlist matches that.
+            </Text>
           )
         ) : null}
 
@@ -134,13 +173,14 @@ export default function BucketScreen() {
           {filtered.map((trip) => (
             <Pressable
               key={trip.id}
-              onPress={() => router.push(`/discover/${trip.id}`)}
+              onPress={() => openTrip(trip)}
               onLongPress={() => confirmDelete(trip)}
               style={({ pressed }) => ({
                 width: CARD_WIDTH,
-                height: 200,
+                height: 210,
                 borderRadius: 20,
                 overflow: 'hidden',
+                backgroundColor: '#E9EAEC',
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
@@ -150,29 +190,43 @@ export default function BucketScreen() {
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
                 />
-              ) : (
-                <View style={{ flex: 1, backgroundColor: '#E5E7EB' }} />
-              )}
-
+              ) : null}
               <LinearGradient
-                colors={['transparent', 'rgba(11,11,14,0.72)', 'rgba(11,11,14,0.96)']}
-                locations={[0.3, 0.65, 1]}
-                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
+                colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.88)']}
+                locations={[0.35, 0.65, 1]}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
               />
-
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                <Text
-                  style={{ color: 'white', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 }}
-                  numberOfLines={1}
-                >
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  backgroundColor: 'rgba(255,255,255,0.92)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 13, color: '#E11D48' }}>♥</Text>
+              </View>
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14 }}>
+                <Text style={{ fontFamily: SERIF, color: 'white', fontSize: 18 }} numberOfLines={1}>
                   {trip.title}
                 </Text>
                 {trip.destination && trip.destination !== trip.title ? (
                   <Text
-                    style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}
+                    style={{
+                      fontFamily: SERIF,
+                      fontStyle: 'italic',
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: 12,
+                      marginTop: 2,
+                    }}
                     numberOfLines={1}
                   >
-                    {trip.destination}
+                    {trip.destination.replace(`${trip.title}, `, '')}
                   </Text>
                 ) : null}
               </View>

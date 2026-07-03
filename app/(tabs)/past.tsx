@@ -6,10 +6,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
+import { SERIF } from '../../lib/editorial';
 import { Trip } from '../../lib/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 32 - 12) / 2);
+const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48 - 12) / 2);
 
 export default function PastScreen() {
   const router = useRouter();
@@ -47,20 +48,37 @@ export default function PastScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
       <View
         style={{
-          paddingHorizontal: 22,
-          paddingTop: 10,
-          paddingBottom: 6,
+          paddingHorizontal: 24,
+          paddingTop: 14,
+          paddingBottom: 14,
           flexDirection: 'row',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
         }}
       >
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
-          Past{'\n'}Trips
-        </Text>
+        <View>
+          <Text
+            style={{
+              color: '#9CA3AF',
+              fontSize: 10,
+              fontWeight: '700',
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              marginBottom: 6,
+            }}
+          >
+            The scrapbook
+          </Text>
+          <Text style={{ fontFamily: SERIF, fontSize: 34, color: '#111', letterSpacing: -0.5 }}>
+            Past
+          </Text>
+          <Text style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+            The journeys that made you.
+          </Text>
+        </View>
         <Pressable
           onPress={() => router.push('/(tabs)/profile')}
           hitSlop={8}
@@ -70,6 +88,7 @@ export default function PastScreen() {
             borderRadius: 21,
             borderWidth: 1,
             borderColor: '#E5E7EB',
+            backgroundColor: 'white',
             alignItems: 'center',
             justifyContent: 'center',
             marginTop: 4,
@@ -82,17 +101,26 @@ export default function PastScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#111" />}
       >
         {!loading && trips.length === 0 ? (
-          <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
-            <Text style={{ fontSize: 44, marginBottom: 14 }}>📸</Text>
-            <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+          <View style={{ alignItems: 'center', marginTop: 56, paddingHorizontal: 20 }}>
+            <Text style={{ fontSize: 40, marginBottom: 16 }}>📸</Text>
+            <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>
               No memories here yet
             </Text>
-            <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
-              Once a trip is behind you it'll live here — your travel scrapbook in the making.
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                color: '#9CA3AF',
+                fontSize: 14,
+                textAlign: 'center',
+                lineHeight: 22,
+              }}
+            >
+              Once a journey is behind you it'll live here —{'\n'}your travel scrapbook in the making.
             </Text>
           </View>
         ) : null}
@@ -127,35 +155,24 @@ export default function PastScreen() {
                 style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '75%' }}
               />
 
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                <Text
-                  style={{ color: 'white', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 }}
-                  numberOfLines={1}
-                >
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14 }}>
+                <Text style={{ fontFamily: SERIF, color: 'white', fontSize: 18 }} numberOfLines={1}>
                   {trip.title}
                 </Text>
                 {trip.destination && trip.destination !== trip.title ? (
                   <Text
-                    style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}
+                    style={{
+                      fontFamily: SERIF,
+                      fontStyle: 'italic',
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: 12,
+                      marginTop: 2,
+                    }}
                     numberOfLines={1}
                   >
-                    {trip.destination}
+                    {trip.destination.replace(`${trip.title}, `, '')}
                   </Text>
                 ) : null}
-                <View
-                  style={{
-                    marginTop: 5,
-                    alignSelf: 'flex-start',
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    borderRadius: 100,
-                    paddingHorizontal: 7,
-                    paddingVertical: 2,
-                  }}
-                >
-                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '600' }}>
-                    Past
-                  </Text>
-                </View>
               </View>
             </Pressable>
           ))}

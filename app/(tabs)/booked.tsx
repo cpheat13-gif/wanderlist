@@ -4,6 +4,7 @@ import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorForCategory } from '../../theme/colors';
 import { supabase } from '../../lib/supabase';
+import { SERIF } from '../../lib/editorial';
 import { Flight, Place, Trip } from '../../lib/types';
 
 export default function BookedScreen() {
@@ -104,37 +105,59 @@ export default function BookedScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 14 }}>
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', letterSpacing: -0.5 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
+      <View style={{ paddingHorizontal: 24, paddingTop: 14, paddingBottom: 14 }}>
+        <Text
+          style={{
+            color: '#9CA3AF',
+            fontSize: 10,
+            fontWeight: '700',
+            letterSpacing: 3,
+            textTransform: 'uppercase',
+            marginBottom: 6,
+          }}
+        >
+          Set in stone
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 34, color: '#111', letterSpacing: -0.5 }}>
           Booked
         </Text>
-        <Text style={{ fontSize: 15, color: '#9CA3AF', marginTop: 4 }}>
-          Confirmed plans across all your trips
+        <Text style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+          Confirmed plans across all your journeys.
         </Text>
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#059669" />}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#111" />}
       >
         {!loading && !hasAny ? (
-          <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
-            <Text style={{ fontSize: 44, marginBottom: 14 }}>🎟️</Text>
-            <Text style={{ color: '#111', fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+          <View style={{ alignItems: 'center', marginTop: 56, paddingHorizontal: 20 }}>
+            <Text style={{ fontSize: 40, marginBottom: 16 }}>🎟</Text>
+            <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>
               Nothing booked yet
             </Text>
-            <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 }}>
-              Check off places inside a trip once you've booked them and they'll show up here.
+            <Text
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                color: '#9CA3AF',
+                fontSize: 14,
+                textAlign: 'center',
+                lineHeight: 22,
+                marginBottom: 22,
+              }}
+            >
+              Check off places inside a trip once{'\n'}they're booked and they'll gather here.
             </Text>
             <Pressable
               onPress={() => router.push('/(tabs)')}
               style={({ pressed }) => ({
-                backgroundColor: '#059669',
+                backgroundColor: '#111',
                 borderRadius: 100,
-                paddingHorizontal: 24,
-                paddingVertical: 12,
+                paddingHorizontal: 26,
+                paddingVertical: 13,
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
@@ -151,7 +174,7 @@ export default function BookedScreen() {
           return (
             <View key={tripId} style={{ marginBottom: 28 }}>
               <Pressable onPress={() => router.push(`/discover/${tripId}`)} hitSlop={4}>
-                <Text style={{ color: '#111', fontSize: 19, fontWeight: '700', marginBottom: 12, letterSpacing: -0.3 }}>
+                <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20, marginBottom: 12, letterSpacing: -0.3 }}>
                   {trip?.title ?? 'Trip'} ›
                 </Text>
               </Pressable>
@@ -160,12 +183,12 @@ export default function BookedScreen() {
                 <View
                   key={flight.id}
                   style={{
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor: 'white',
                     borderRadius: 16,
                     padding: 14,
                     marginBottom: 8,
                     borderWidth: 1,
-                    borderColor: '#F3F4F6',
+                    borderColor: '#F0F0EE',
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -187,7 +210,7 @@ export default function BookedScreen() {
                         width: 26,
                         height: 26,
                         borderRadius: 7,
-                        backgroundColor: '#059669',
+                        backgroundColor: '#111',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
@@ -219,12 +242,12 @@ export default function BookedScreen() {
                 <View
                   key={place.id}
                   style={{
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor: 'white',
                     borderRadius: 16,
                     padding: 14,
                     marginBottom: 8,
                     borderWidth: 1,
-                    borderColor: '#F3F4F6',
+                    borderColor: '#F0F0EE',
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -254,7 +277,7 @@ export default function BookedScreen() {
                         width: 26,
                         height: 26,
                         borderRadius: 7,
-                        backgroundColor: '#059669',
+                        backgroundColor: '#111',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
