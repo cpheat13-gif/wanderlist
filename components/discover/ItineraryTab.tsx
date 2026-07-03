@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SERIF, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
@@ -12,6 +13,7 @@ export function ItineraryTab({
   rows: ItineraryDayRow[];
   onRefine: () => void;
 }) {
+  const router = useRouter();
   const sorted = rows.slice().sort((a, b) => a.day_number - b.day_number);
   const total =
     trip.est_cost_per_person ?? sorted.reduce((sum, r) => sum + (r.est_cost ?? 0), 0);
@@ -110,8 +112,9 @@ export function ItineraryTab({
                 <View style={{ width: 1.5, flex: 1, backgroundColor: '#E5E5E0', marginVertical: 4 }} />
               ) : null}
             </View>
-            <View
-              style={{
+            <Pressable
+              onPress={() => router.push(`/day/${row.id}`)}
+              style={({ pressed }) => ({
                 flex: 1,
                 marginLeft: 12,
                 marginBottom: last ? 0 : 18,
@@ -120,7 +123,8 @@ export function ItineraryTab({
                 borderColor: '#F0F0EE',
                 borderRadius: 16,
                 padding: 16,
-              }}
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              })}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <Text
@@ -180,7 +184,10 @@ export function ItineraryTab({
                   </View>
                 </View>
               ))}
-            </View>
+              <View style={{ marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F5F5F2' }}>
+                <Text style={{ color: '#111', fontSize: 12.5, fontWeight: '700' }}>View the day →</Text>
+              </View>
+            </Pressable>
           </View>
         );
       })}

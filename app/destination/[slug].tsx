@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto, fetchDestinationPhotos } from '../../lib/unsplash';
 import { DestinationDossier, fetchDestinationDossier } from '../../lib/ai';
 import { Highlight, SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
+import { ConciergeLoader } from '../../components/ConciergeLoader';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GALLERY_H = Math.round(SCREEN_HEIGHT * 0.52);
@@ -337,11 +338,8 @@ export default function DestinationDetailScreen() {
               {intro}
             </Text>
           ) : dossierLoading ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <ActivityIndicator color="#9CA3AF" size="small" />
-              <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14 }}>
-                The concierge is writing…
-              </Text>
+            <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+              <ConciergeLoader caption="The concierge is writing…" size={56} />
             </View>
           ) : null}
 

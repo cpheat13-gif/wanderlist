@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { FlightCard } from '../FlightCard';
 import { SERIF } from '../../lib/editorial';
+import { ConciergeLoader } from '../ConciergeLoader';
 import { estimateFlight } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 import { Flight } from '../../lib/types';
@@ -126,7 +127,13 @@ export function FlightsTab({
 
       {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
 
-      {estimate ? (
+      {loading ? (
+        <View style={{ alignItems: 'center', paddingVertical: 24, marginBottom: 6 }}>
+          <ConciergeLoader caption="Checking fares…" size={54} />
+        </View>
+      ) : null}
+
+      {estimate && !loading ? (
         <View className="bg-white border border-neutral-200 rounded-2xl px-4 py-3 mb-6">
           <Text className="text-neutral-900 font-semibold mb-1">
             {estimate.fromCity} → {estimate.toCity}

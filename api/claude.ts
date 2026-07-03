@@ -151,6 +151,32 @@ const FLIGHT_ESTIMATE_TOOL = {
   },
 };
 
+const ENRICH_DAY_TOOL = {
+  name: 'enrich_day',
+  description: 'Deepen a single day of an itinerary: assign each stop a time of day and an insider tip.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      activities: {
+        type: 'array',
+        description: 'The same stops given, in a sensible running order, each enriched.',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
+            description: { type: 'string', description: 'Keep the original description (lightly polished is fine).' },
+            timeOfDay: { type: 'string', enum: ['Morning', 'Afternoon', 'Evening'] },
+            tip: { type: 'string', description: 'One concrete insider tip — timing, booking, what to order, how to beat crowds (~15-25 words).' },
+          },
+          required: ['title', 'category', 'description', 'timeOfDay', 'tip'],
+        },
+      },
+    },
+    required: ['activities'],
+  },
+};
+
 const HIGHLIGHTS_TOOL = {
   name: 'destination_dossier',
   description: 'Provide a full editorial dossier for a destination: tagline, intro, key facts, cost estimate, and highlights.',
@@ -466,6 +492,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'dayplan') {
+      const { destination, country, title, summary, activities } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!Array.isArray(activities) || activities.length === 0) {
+        res.status(400).json({ error: 'activities is required and must be non-empty' });
+        return;
+      }
+      const userText = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        title ? `Day: ${title}` : null,
+        summary ? `Summary: ${summary}` : null,
+        `Stops (JSON): ${JSON.stringify(activities)}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await callClaude(
+        'You are a well-traveled concierge deepening one day of a trip. For each given stop, keep its title and ' +
+          'category, order them into a natural Morning → Afternoon → Evening flow, and add one concrete insider ' +
+          'tip per stop (timing, booking, what to order, how to skip the crowds). Do not invent new stops or drop ' +
+          'any — return exactly the stops given, enriched.',
+        userText,
+        ENRICH_DAY_TOOL,
+        2048
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'flight') {
       const { from, to, destination, country } = req.body;
       if (!from || typeof from !== 'string') {
@@ -615,7 +673,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

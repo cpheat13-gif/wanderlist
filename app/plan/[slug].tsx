@@ -21,6 +21,7 @@ import { fetchDestinationPhoto } from '../../lib/unsplash';
 import { buildItinerary, refineItinerary, FlightEstimate, ItineraryDay } from '../../lib/ai';
 import { SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
+import { ConciergeLoader } from '../../components/ConciergeLoader';
 import { ItineraryDayRow } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -814,24 +815,8 @@ export default function PlanTripScreen() {
         ) : null}
 
         {phase === 'generating' ? (
-          <View style={{ alignItems: 'center', paddingTop: 70, paddingHorizontal: 40 }}>
-            <ActivityIndicator color="#111" size="large" />
-            <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111', marginTop: 24, textAlign: 'center' }}>
-              Drafting your {days} days in {destName}…
-            </Text>
-            <Text
-              style={{
-                fontFamily: SERIF,
-                fontStyle: 'italic',
-                color: '#9CA3AF',
-                fontSize: 13.5,
-                marginTop: 8,
-                textAlign: 'center',
-                lineHeight: 20,
-              }}
-            >
-              Weighing seasons, distances, and the places worth your mornings.
-            </Text>
+          <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 }}>
+            <ConciergeLoader caption={`Drafting your ${days} days in ${destName}…`} size={72} />
           </View>
         ) : null}
 

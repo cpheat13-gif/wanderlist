@@ -24,6 +24,9 @@ export interface ItineraryActivity {
   title: string;
   category: PlaceCategory;
   description: string;
+  // Added by the day "Go deeper" enrichment (optional).
+  timeOfDay?: string;
+  tip?: string;
 }
 
 export interface ItineraryDayRow {

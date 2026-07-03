@@ -124,6 +124,25 @@ export function estimateFlight(params: {
   return postClaude<FlightEstimate>({ mode: 'flight', ...params });
 }
 
+export interface EnrichedActivity {
+  title: string;
+  category: PlaceCategory;
+  description: string;
+  timeOfDay: string;
+  tip: string;
+}
+
+// Deepen one day: order stops Morning→Evening and add an insider tip to each.
+export function enrichDay(params: {
+  destination: string;
+  country?: string;
+  title?: string;
+  summary?: string;
+  activities: { title: string; category: PlaceCategory; description: string }[];
+}): Promise<{ activities: EnrichedActivity[] }> {
+  return postClaude<{ activities: EnrichedActivity[] }>({ mode: 'dayplan', ...params });
+}
+
 export interface RefineResponse {
   reply: string;
   days: ItineraryDay[];
