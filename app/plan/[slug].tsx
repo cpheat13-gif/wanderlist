@@ -62,6 +62,22 @@ function rowsToDays(rows: ItineraryDayRow[]): ItineraryDay[] {
     }));
 }
 
+// Harden AI responses so a missing/partial field can never crash the render
+// (e.g. a day returned without an `items` array). Belt-and-suspenders behind
+// the tool schema — models can occasionally omit fields or truncate.
+function normalizeDays(days: ItineraryDay[] | undefined | null): ItineraryDay[] {
+  if (!Array.isArray(days)) return [];
+  return days.map((d, i) => ({
+    day: typeof d?.day === 'number' ? d.day : i + 1,
+    title: d?.title ?? `Day ${i + 1}`,
+    summary: d?.summary ?? '',
+    estCostPerPersonUsd: typeof d?.estCostPerPersonUsd === 'number' ? d.estCostPerPersonUsd : 0,
+    items: Array.isArray(d?.items)
+      ? d.items.filter((it) => it && typeof it.title === 'string')
+      : [],
+  }));
+}
+
 export default function PlanTripScreen() {
   const params = useLocalSearchParams<{ slug: string; tripId?: string; name?: string; country?: string }>();
   const router = useRouter();
@@ -211,12 +227,16 @@ export default function PlanTripScreen() {
         travelers,
         interests,
       });
-      setItinerary(res.days);
-      setFlightEstimate(res.flightEstimate);
+      const cleanDays = normalizeDays(res.days);
+      if (cleanDays.length === 0) {
+        throw new Error('The concierge returned an empty itinerary — please try again.');
+      }
+      setItinerary(cleanDays);
+      setFlightEstimate(res.flightEstimate ?? null);
       setSaved(false);
       setPhase('builder');
       if (autoSaveRef.current) {
-        await persist(res.days);
+        await persist(cleanDays);
       }
     } catch (err) {
       setGenError(err instanceof Error ? err.message : 'Something went wrong building the itinerary.');
@@ -267,7 +287,8 @@ export default function PlanTripScreen() {
         message: userMsg.text,
         history: chat.slice(-6),
       });
-      setItinerary(res.days);
+      const cleanDays = normalizeDays(res.days);
+      if (cleanDays.length > 0) setItinerary(cleanDays);
       setSaved(false);
       setChat((prev) => [...prev, { role: 'assistant', text: res.reply }]);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
@@ -396,7 +417,7 @@ export default function PlanTripScreen() {
           <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 12.5, lineHeight: 18, marginBottom: 10 }}>
             {day.summary}
           </Text>
-          {day.items.map((item, i) => (
+          {(day.items ?? []).map((item, i) => (
             <View key={`${item.title}-${i}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 7 }}>
               <View
                 style={{

@@ -160,7 +160,7 @@ export function ItineraryTab({
                   {row.summary}
                 </Text>
               ) : null}
-              {row.activities.map((item, j) => (
+              {(row.activities ?? []).map((item, j) => (
                 <View key={`${item.title}-${j}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 7 }}>
                   <View
                     style={{
