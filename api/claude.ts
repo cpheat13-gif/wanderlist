@@ -258,7 +258,12 @@ interface ClaudeMessage {
   content: string;
 }
 
-async function callClaude(system: string, userTextOrMessages: string | ClaudeMessage[], tool: ClaudeTool) {
+async function callClaude(
+  system: string,
+  userTextOrMessages: string | ClaudeMessage[],
+  tool: ClaudeTool,
+  maxTokens = 4096
+) {
   const messages: ClaudeMessage[] =
     typeof userTextOrMessages === 'string' ? [{ role: 'user', content: userTextOrMessages }] : userTextOrMessages;
 
@@ -271,7 +276,7 @@ async function callClaude(system: string, userTextOrMessages: string | ClaudeMes
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 2048,
+      max_tokens: maxTokens,
       system,
       messages,
       tools: [tool],
@@ -285,6 +290,11 @@ async function callClaude(system: string, userTextOrMessages: string | ClaudeMes
   }
 
   const json = await res.json();
+  // A truncated response yields partial/broken tool JSON (e.g. an empty days
+  // array) — fail clearly instead of returning half an itinerary.
+  if (json.stop_reason === 'max_tokens') {
+    throw new Error('The response was too long to complete — try fewer days or a simpler request.');
+  }
   const toolUse = json.content?.find((block: { type: string }) => block.type === 'tool_use');
   if (!toolUse) throw new Error('Claude did not return a structured response.');
   return toolUse.input;
@@ -357,7 +367,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'round-trip flight cost estimate based on general knowledge — always caveat it as a rough, non-live ' +
           'estimate, not real-time pricing. Season matters: tailor activities to the stated time of year.',
         userText,
-        BUILD_ITINERARY_TOOL
+        BUILD_ITINERARY_TOOL,
+        8192
       );
       res.status(200).json(result);
       return;
@@ -409,7 +420,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'estCostPerPersonUsd per day) — if their message is only a question, answer in the reply and return ' +
           'the itinerary unchanged. Keep changes surgical: preserve days they have not asked you to touch.',
         [...priorMessages, { role: 'user', content: context }],
-        REFINE_ITINERARY_TOOL
+        REFINE_ITINERARY_TOOL,
+        8192
       );
       res.status(200).json(result);
       return;
