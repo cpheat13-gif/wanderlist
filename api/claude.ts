@@ -136,6 +136,21 @@ const REFINE_ITINERARY_TOOL = {
   },
 };
 
+const FLIGHT_ESTIMATE_TOOL = {
+  name: 'estimate_flight',
+  description: 'Estimate a rough round-trip economy flight cost between two airports or cities.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fromCity: { type: 'string', description: "Resolved origin as 'City (CODE)', e.g. 'San Francisco (SFO)'." },
+      toCity: { type: 'string', description: "Resolved destination as 'City (CODE)', e.g. 'Denpasar (DPS)'." },
+      estimatedRoundTripUsd: { type: 'number', description: 'Rough round-trip economy fare in USD, rounded.' },
+      note: { type: 'string', description: 'Brief caveat that this is a rough, non-live estimate.' },
+    },
+    required: ['fromCity', 'toCity', 'estimatedRoundTripUsd', 'note'],
+  },
+};
+
 const HIGHLIGHTS_TOOL = {
   name: 'destination_dossier',
   description: 'Provide a full editorial dossier for a destination: tagline, intro, key facts, cost estimate, and highlights.',
@@ -451,6 +466,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'flight') {
+      const { from, to, destination, country } = req.body;
+      if (!from || typeof from !== 'string') {
+        res.status(400).json({ error: 'from is required' });
+        return;
+      }
+      const userText = [
+        `Origin airport/city: ${from}`,
+        to && typeof to === 'string'
+          ? `Destination airport/city: ${to}`
+          : destination
+            ? `Destination: ${destination}${country ? `, ${country}` : ''}`
+            : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await callClaude(
+        'You estimate rough round-trip economy flight costs for a travel app. The traveler may give IATA ' +
+          'airport codes (e.g. SFO, JFK, DPS, LHR, CDG) or plain city/region names — resolve any code to its ' +
+          'city and airport. If only a city or region is given for the destination, pick the most sensible main ' +
+          'international airport. Return a realistic round-trip economy fare in USD based on typical pricing and ' +
+          'the route distance, and always caveat that it is a rough, non-live estimate — not real-time pricing.',
+        userText,
+        FLIGHT_ESTIMATE_TOOL,
+        1024
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'explore') {
       const { destination, country, query } = req.body;
       if (!destination || typeof destination !== 'string') {
@@ -569,7 +615,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

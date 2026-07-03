@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { FlightCard } from '../FlightCard';
 import { SERIF } from '../../lib/editorial';
-import { buildItinerary } from '../../lib/ai';
+import { estimateFlight } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 import { Flight } from '../../lib/types';
 
@@ -17,7 +17,8 @@ export function FlightsTab({
   country?: string;
 }) {
   const router = useRouter();
-  const [departureCity, setDepartureCity] = useState('');
+  const [fromAirport, setFromAirport] = useState('');
+  const [toAirport, setToAirport] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<{
@@ -40,16 +41,17 @@ export function FlightsTab({
   );
 
   async function handleEstimate() {
-    if (loading) return;
+    if (loading || !fromAirport.trim()) return;
     setError(null);
     setLoading(true);
     try {
-      const result = await buildItinerary({
+      const result = await estimateFlight({
+        from: fromAirport.trim(),
+        to: toAirport.trim() || undefined,
         destination,
         country,
-        departureCity: departureCity.trim() || undefined,
       });
-      setEstimate(result.flightEstimate);
+      setEstimate(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong estimating flights.');
     } finally {
@@ -63,28 +65,55 @@ export function FlightsTab({
       style={{ backgroundColor: '#FDFCFA' }}
       contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
     >
-      <Text style={{ fontFamily: SERIF, fontSize: 28, color: '#111', marginBottom: 12 }}>Flights</Text>
+      <Text style={{ fontFamily: SERIF, fontSize: 28, color: '#111', marginBottom: 4 }}>Flights</Text>
+      <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginBottom: 16 }}>
+        Enter any airport code — SFO, LHR, DPS — and we'll estimate the fare.
+      </Text>
 
-      <Text className="text-neutral-700 font-medium mb-1.5">Flying from</Text>
-      <View className="flex-row items-center mb-3">
-        <TextInput
-          className="flex-1 bg-neutral-100 rounded-full px-4 py-3 text-neutral-900 mr-2"
-          placeholder="e.g. New York"
-          placeholderTextColor="#A3A3A3"
-          value={departureCity}
-          onChangeText={setDepartureCity}
-        />
+      <View className="flex-row" style={{ gap: 10, marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+            From
+          </Text>
+          <TextInput
+            className="rounded-2xl px-4 py-3"
+            style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', color: '#111', fontSize: 16 }}
+            placeholder="SFO"
+            placeholderTextColor="#B6BAC2"
+            value={fromAirport}
+            onChangeText={setFromAirport}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={40}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+            To · optional
+          </Text>
+          <TextInput
+            className="rounded-2xl px-4 py-3"
+            style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', color: '#111', fontSize: 16 }}
+            placeholder={destination}
+            placeholderTextColor="#B6BAC2"
+            value={toAirport}
+            onChangeText={setToAirport}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={40}
+          />
+        </View>
       </View>
       <Pressable
         onPress={handleEstimate}
-        disabled={loading || !departureCity.trim()}
+        disabled={loading || !fromAirport.trim()}
         style={({ pressed }) => ({
           backgroundColor: '#111',
           borderRadius: 100,
           paddingVertical: 14,
           alignItems: 'center',
           marginBottom: 20,
-          opacity: loading || !departureCity.trim() ? 0.4 : 1,
+          opacity: loading || !fromAirport.trim() ? 0.4 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
         })}
       >

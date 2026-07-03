@@ -113,6 +113,17 @@ export function buildItinerary(params: {
   return postClaude<ItineraryResponse>({ mode: 'itinerary', ...params });
 }
 
+// Lightweight, fast flight-cost estimate. Accepts IATA airport codes (SFO, DPS)
+// or city names for `from`; `to` is optional and falls back to `destination`.
+export function estimateFlight(params: {
+  from: string;
+  to?: string;
+  destination?: string;
+  country?: string;
+}): Promise<FlightEstimate> {
+  return postClaude<FlightEstimate>({ mode: 'flight', ...params });
+}
+
 export interface RefineResponse {
   reply: string;
   days: ItineraryDay[];
