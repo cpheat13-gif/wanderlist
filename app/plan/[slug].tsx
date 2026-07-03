@@ -26,9 +26,9 @@ import { ItineraryDayRow } from '../../lib/types';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COVER_H = Math.round(SCREEN_HEIGHT * 0.24);
 
-type Phase = 'days' | 'season' | 'travelers' | 'fork' | 'generating' | 'builder';
+type Phase = 'days' | 'season' | 'travelers' | 'origin' | 'fork' | 'generating' | 'builder';
 
-const WIZARD_STEPS: Phase[] = ['days', 'season', 'travelers'];
+const WIZARD_STEPS: Phase[] = ['days', 'season', 'travelers', 'origin'];
 const DAY_CHIPS = [3, 5, 7, 10];
 const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter', 'Flexible'];
 const FALLBACK_DAILY_COST = 150;
@@ -97,6 +97,7 @@ export default function PlanTripScreen() {
   const [days, setDays] = useState(recommendedDays(dest?.facts.tripLength));
   const [season, setSeason] = useState<string | null>(dest?.facts.season ?? null);
   const [travelers, setTravelers] = useState(2);
+  const [departureCity, setDepartureCity] = useState('');
 
   // Builder state
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
@@ -208,7 +209,7 @@ export default function PlanTripScreen() {
       return;
     }
     if (phase === 'fork') {
-      setPhase('travelers');
+      setPhase('origin');
       return;
     }
     if (router.canGoBack()) router.back();
@@ -225,6 +226,7 @@ export default function PlanTripScreen() {
         days,
         season: season ?? undefined,
         travelers,
+        departureCity: departureCity.trim() || undefined,
         interests,
       });
       const cleanDays = normalizeDays(res.days);
@@ -679,6 +681,63 @@ export default function PlanTripScreen() {
                 </View>
               </View>
             ) : null}
+
+            {phase === 'origin' ? (
+              <View>
+                <Text style={{ fontFamily: SERIF, fontSize: 25, color: '#111', marginBottom: 6 }}>
+                  Where would you fly from?
+                </Text>
+                <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginBottom: 22 }}>
+                  Your home airport(s), so the flight estimate is real — not a guess. Optional.
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#F0F0EE',
+                    borderRadius: 16,
+                    paddingHorizontal: 18,
+                    paddingVertical: 16,
+                    color: '#111',
+                    fontSize: 15,
+                  }}
+                  placeholder="e.g. SFO, or New York (JFK/EWR)"
+                  placeholderTextColor="#B6BAC2"
+                  value={departureCity}
+                  onChangeText={setDepartureCity}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                  {['New York (JFK)', 'Los Angeles (LAX)', 'London (LHR)', 'Chicago (ORD)'].map((city) => (
+                    <Pressable
+                      key={city}
+                      onPress={() => setDepartureCity(city)}
+                      style={({ pressed }) => ({
+                        borderWidth: 1,
+                        borderColor: departureCity === city ? '#111' : '#E5E7EB',
+                        backgroundColor: departureCity === city ? '#111' : 'white',
+                        borderRadius: 100,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        transform: [{ scale: pressed ? 0.95 : 1 }],
+                      })}
+                    >
+                      <Text
+                        style={{
+                          color: departureCity === city ? 'white' : '#6B7280',
+                          fontSize: 12.5,
+                          fontWeight: '600',
+                        }}
+                      >
+                        {city}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -689,6 +748,7 @@ export default function PlanTripScreen() {
             </Text>
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginBottom: 22 }}>
               {days} days · {season ?? 'Flexible'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'}
+              {departureCity.trim() ? ` · from ${departureCity.trim()}` : ''}
             </Text>
 
             {genError ? (
