@@ -48,10 +48,36 @@ export default function PastScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
+      <View
+        style={{
+          paddingHorizontal: 22,
+          paddingTop: 10,
+          paddingBottom: 6,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+        }}
+      >
         <Text style={{ fontSize: 32, fontWeight: '800', color: '#111', lineHeight: 40 }}>
           Past{'\n'}Trips
         </Text>
+        <Pressable
+          onPress={() => router.push('/(tabs)/profile')}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            borderWidth: 1,
+            borderColor: '#E5E7EB',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: 4,
+            transform: [{ scale: pressed ? 0.92 : 1 }],
+          })}
+        >
+          <Text style={{ fontSize: 17, color: '#111' }}>◎</Text>
+        </Pressable>
       </View>
 
       <ScrollView

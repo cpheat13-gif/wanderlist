@@ -43,6 +43,9 @@ function RootNavigator() {
       <Stack.Screen name="trip/[id]/add-flight" options={{ title: 'Add Flight', presentation: 'modal' }} />
       <Stack.Screen name="trip/[id]/map" options={{ title: 'Map' }} />
       <Stack.Screen name="discover/[tripId]" options={{ headerShown: false }} />
+      <Stack.Screen name="destination/[slug]" options={{ headerShown: false }} />
+      <Stack.Screen name="tour/[slug]" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }
