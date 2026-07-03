@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PillButton } from '../PillButton';
 import { colorForCategory } from '../../theme/colors';
+import { SERIF } from '../../lib/editorial';
 import { exploreDestination, ExploreResult } from '../../lib/ai';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
@@ -284,7 +285,7 @@ export function ExplorerTab({
                 borderRadius: 14,
                 overflow: 'hidden',
                 borderWidth: 2.5,
-                borderColor: activePhotoIndex === i ? '#059669' : 'rgba(255,255,255,0.85)',
+                borderColor: activePhotoIndex === i ? 'white' : 'rgba(255,255,255,0.45)',
                 backgroundColor: 'rgba(255,255,255,0.15)',
               }}
             >
@@ -351,13 +352,15 @@ export function ExplorerTab({
           {/* Destination name + location */}
           <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 14 }}>
             <Text
-              style={{ fontSize: 28, fontWeight: '700', color: '#111', letterSpacing: -0.5 }}
+              style={{ fontFamily: SERIF, fontSize: 30, color: '#111', letterSpacing: -0.5 }}
               numberOfLines={1}
             >
               {destination}
             </Text>
             {country ? (
-              <Text style={{ color: '#9CA3AF', fontSize: 14, marginTop: 4 }}>📍 {country}</Text>
+              <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 14, marginTop: 4 }}>
+                {country}
+              </Text>
             ) : null}
           </View>
 
@@ -367,7 +370,9 @@ export function ExplorerTab({
               flexDirection: 'row',
               marginHorizontal: 16,
               marginBottom: 16,
-              backgroundColor: '#F9FAFB',
+              backgroundColor: 'white',
+              borderWidth: 1,
+              borderColor: '#F0F0EE',
               borderRadius: 18,
               overflow: 'hidden',
             }}
@@ -384,11 +389,11 @@ export function ExplorerTab({
                   alignItems: 'center',
                   paddingVertical: 14,
                   borderLeftWidth: i > 0 ? 1 : 0,
-                  borderLeftColor: '#E5E7EB',
+                  borderLeftColor: '#F0F0EE',
                 }}
               >
-                <Text style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 5 }}>{label}</Text>
-                <Text style={{ color: '#059669', fontSize: 22, fontWeight: '700' }}>{value}</Text>
+                <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 5, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: '600' }}>{label}</Text>
+                <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 22 }}>{value}</Text>
               </View>
             ))}
           </View>
@@ -400,7 +405,7 @@ export function ExplorerTab({
               style={{
                 marginHorizontal: 16,
                 marginBottom: 16,
-                backgroundColor: '#059669',
+                backgroundColor: '#111',
                 borderRadius: 18,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -463,7 +468,7 @@ export function ExplorerTab({
                 My TikTok Links
               </Text>
               <Pressable onPress={() => setShowLinkInput((v) => !v)}>
-                <Text style={{ color: '#059669', fontSize: 13, fontWeight: '600' }}>
+                <Text style={{ color: '#111', fontSize: 13, fontWeight: '600' }}>
                   {showLinkInput ? 'Cancel' : '+ Add link'}
                 </Text>
               </Pressable>
@@ -474,7 +479,7 @@ export function ExplorerTab({
                 <TextInput
                   style={{
                     flex: 1,
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor: 'white',
                     borderRadius: 12,
                     paddingHorizontal: 14,
                     paddingVertical: 11,
@@ -496,7 +501,7 @@ export function ExplorerTab({
                   onPress={handleSaveLink}
                   disabled={!linkInput.trim() || savingLink}
                   style={{
-                    backgroundColor: '#059669',
+                    backgroundColor: '#111',
                     borderRadius: 12,
                     paddingHorizontal: 16,
                     paddingVertical: 11,
@@ -525,13 +530,13 @@ export function ExplorerTab({
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor: 'white',
                     borderRadius: 12,
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     marginBottom: 8,
                     borderWidth: 1,
-                    borderColor: '#F3F4F6',
+                    borderColor: '#F0F0EE',
                   }}
                 >
                   <Text style={{ fontSize: 16, marginRight: 10 }}>♪</Text>
@@ -551,7 +556,7 @@ export function ExplorerTab({
                   >
                     <Text
                       style={{
-                        color: copiedId === link.id ? '#059669' : '#9CA3AF',
+                        color: copiedId === link.id ? '#111' : '#9CA3AF',
                         fontSize: 12,
                         fontWeight: '600',
                       }}
@@ -584,7 +589,7 @@ export function ExplorerTab({
                     paddingHorizontal: 20,
                     paddingVertical: 10,
                     borderRadius: 100,
-                    backgroundColor: isActive ? '#059669' : '#F3F4F6',
+                    backgroundColor: isActive ? '#111' : '#F0F0EE',
                   }}
                 >
                   <Text
@@ -607,7 +612,7 @@ export function ExplorerTab({
               <TextInput
                 style={{
                   flex: 1,
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: '#F0F0EE',
                   borderRadius: 100,
                   paddingHorizontal: 20,
                   paddingVertical: 13,
@@ -626,7 +631,7 @@ export function ExplorerTab({
                 onPress={() => runSearch(query)}
                 disabled={loading || !query.trim()}
                 style={{
-                  backgroundColor: '#059669',
+                  backgroundColor: '#111',
                   borderRadius: 100,
                   width: 46,
                   height: 46,
@@ -686,14 +691,14 @@ export function ExplorerTab({
                   <View
                     key={place.id}
                     style={{
-                      backgroundColor: '#F9FAFB',
+                      backgroundColor: 'white',
                       borderRadius: 16,
                       padding: 14,
                       marginBottom: 8,
                       flexDirection: 'row',
                       alignItems: 'center',
                       borderWidth: 1,
-                      borderColor: '#F3F4F6',
+                      borderColor: '#F0F0EE',
                     }}
                   >
                     <View
@@ -724,7 +729,7 @@ export function ExplorerTab({
                         width: 26,
                         height: 26,
                         borderRadius: 7,
-                        backgroundColor: place.is_booked ? '#059669' : 'transparent',
+                        backgroundColor: place.is_booked ? '#111' : 'transparent',
                         borderWidth: place.is_booked ? 0 : 1.5,
                         borderColor: '#D1D5DB',
                         alignItems: 'center',
@@ -748,7 +753,7 @@ export function ExplorerTab({
             {/* ── Search results ── */}
             {loading ? (
               <View style={{ alignItems: 'center', marginTop: 28 }}>
-                <ActivityIndicator color="#059669" />
+                <ActivityIndicator color="#111" />
               </View>
             ) : results.length > 0 ? (
               <View>
@@ -775,12 +780,12 @@ export function ExplorerTab({
                       key={key}
                       style={{
                         flexDirection: 'row',
-                        backgroundColor: '#F9FAFB',
+                        backgroundColor: 'white',
                         borderRadius: 18,
                         marginBottom: 12,
                         overflow: 'hidden',
                         borderWidth: 1,
-                        borderColor: '#F3F4F6',
+                        borderColor: '#F0F0EE',
                       }}
                     >
                       <View style={{ width: 110, minHeight: 110, backgroundColor: '#E5E7EB' }}>
@@ -799,7 +804,7 @@ export function ExplorerTab({
                               justifyContent: 'center',
                             }}
                           >
-                            <ActivityIndicator color="#059669" />
+                            <ActivityIndicator color="#111" />
                           </View>
                         )}
                       </View>
@@ -829,16 +834,16 @@ export function ExplorerTab({
                                 style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
-                                  backgroundColor: '#F0FDF4',
+                                  backgroundColor: '#F5F5F2',
                                   borderRadius: 100,
                                   paddingHorizontal: 12,
                                   paddingVertical: 6,
                                   borderWidth: 1,
-                                  borderColor: '#059669',
+                                  borderColor: '#111',
                                 }}
                               >
                                 <Text
-                                  style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}
+                                  style={{ fontSize: 12, color: '#111', fontWeight: '600' }}
                                 >
                                   🔗 {link.label}
                                 </Text>
@@ -857,7 +862,7 @@ export function ExplorerTab({
                             onPress={() => toggleExpanded(key)}
                             style={{ marginTop: 8, alignSelf: 'flex-start' }}
                           >
-                            <Text style={{ color: '#059669', fontSize: 13, fontWeight: '600' }}>
+                            <Text style={{ color: '#111', fontSize: 13, fontWeight: '600' }}>
                               Explore more ›
                             </Text>
                           </Pressable>
@@ -897,7 +902,7 @@ export function ExplorerTab({
                         paddingHorizontal: 22,
                         paddingVertical: 10,
                         borderRadius: 100,
-                        backgroundColor: '#F3F4F6',
+                        backgroundColor: '#F0F0EE',
                       }}
                     >
                       <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 14 }}>

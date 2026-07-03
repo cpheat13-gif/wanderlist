@@ -45,8 +45,9 @@ export default function DestinationScreen() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [flightCount, setFlightCount] = useState(0);
   const [itineraryRows, setItineraryRows] = useState<ItineraryDayRow[]>([]);
-  const [activeTab, setActiveTab] = useState<DestinationTab>('explorer');
-  const [tabInitialized, setTabInitialized] = useState(false);
+  // Every trip lands on Itinerary — its empty state invites planning, so the
+  // workspace feels the same whether or not an itinerary exists yet.
+  const [activeTab, setActiveTab] = useState<DestinationTab>('itinerary');
 
   useFocusEffect(
     useCallback(() => {
@@ -82,13 +83,7 @@ export default function DestinationScreen() {
         .select('*')
         .eq('trip_id', tripId)
         .then(({ data }) => {
-          const rows = (data ?? []) as ItineraryDayRow[];
-          setItineraryRows(rows);
-          // Trips with a built itinerary open on it by default (once).
-          setTabInitialized((done) => {
-            if (!done && rows.length > 0) setActiveTab('itinerary');
-            return true;
-          });
+          setItineraryRows((data ?? []) as ItineraryDayRow[]);
         });
     }, [tripId])
   );
@@ -118,7 +113,7 @@ export default function DestinationScreen() {
   }
 
   if (!trip) {
-    return <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F2F4' }} />;
+    return <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA' }} />;
   }
 
   const { name, country } = parseDestination(trip.destination);
@@ -137,7 +132,7 @@ export default function DestinationScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F2F2F4' }}>
+    <View style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
       {activeTab !== 'explorer' ? (
         <SecondaryHeader title={trip.title} onBack={handleBack} />
       ) : null}

@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { PillButton } from '../PillButton';
 import { FlightCard } from '../FlightCard';
+import { SERIF } from '../../lib/editorial';
 import { buildItinerary } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 import { Flight } from '../../lib/types';
@@ -58,8 +58,12 @@ export function FlightsTab({
   }
 
   return (
-    <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 110 }}>
-      <Text className="text-neutral-900 text-2xl font-semibold mb-3">Flights</Text>
+    <ScrollView
+      className="flex-1"
+      style={{ backgroundColor: '#FDFCFA' }}
+      contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
+    >
+      <Text style={{ fontFamily: SERIF, fontSize: 28, color: '#111', marginBottom: 12 }}>Flights</Text>
 
       <Text className="text-neutral-700 font-medium mb-1.5">Flying from</Text>
       <View className="flex-row items-center mb-3">
@@ -71,23 +75,34 @@ export function FlightsTab({
           onChangeText={setDepartureCity}
         />
       </View>
-      <PillButton
-        label="Estimate flight cost"
+      <Pressable
         onPress={handleEstimate}
-        variant="solid"
-        loading={loading}
-        disabled={!departureCity.trim()}
-        className="mb-5"
-      />
+        disabled={loading || !departureCity.trim()}
+        style={({ pressed }) => ({
+          backgroundColor: '#111',
+          borderRadius: 100,
+          paddingVertical: 14,
+          alignItems: 'center',
+          marginBottom: 20,
+          opacity: loading || !departureCity.trim() ? 0.4 : 1,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
+        })}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Estimate flight cost</Text>
+        )}
+      </Pressable>
 
       {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
 
       {estimate ? (
-        <View className="bg-neutral-50 border border-neutral-200 rounded-2xl px-4 py-3 mb-6">
+        <View className="bg-white border border-neutral-200 rounded-2xl px-4 py-3 mb-6">
           <Text className="text-neutral-900 font-semibold mb-1">
             {estimate.fromCity} → {estimate.toCity}
           </Text>
-          <Text className="text-emerald-700 text-lg font-bold mb-1">
+          <Text style={{ fontFamily: SERIF, fontSize: 18, color: '#111', marginBottom: 4 }}>
             ~${estimate.estimatedRoundTripUsd.toLocaleString()} round trip
           </Text>
           <Text className="text-neutral-500 text-xs">{estimate.note}</Text>
@@ -95,9 +110,9 @@ export function FlightsTab({
       ) : null}
 
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-neutral-900 text-lg font-semibold">Logged flights</Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 18, color: '#111' }}>Logged flights</Text>
         <Pressable onPress={() => router.push(`/trip/${tripId}/add-flight`)}>
-          <Text className="text-emerald-600 font-medium">+ Add flight</Text>
+          <Text className="text-neutral-900 font-semibold">+ Add flight</Text>
         </Pressable>
       </View>
 

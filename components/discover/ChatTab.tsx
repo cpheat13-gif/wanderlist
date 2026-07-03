@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SERIF } from '../../lib/editorial';
 import { askAboutDestination } from '../../lib/ai';
 
 interface ChatMessage {
@@ -38,11 +39,17 @@ export function ChatTab({ destination, country }: { destination: string; country
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={8}
     >
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 16 }}>
-        <Text className="text-neutral-900 text-2xl font-semibold mb-3">Ask about {destination}</Text>
+      <ScrollView
+        className="flex-1"
+        style={{ backgroundColor: '#FDFCFA' }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 16 }}
+      >
+        <Text style={{ fontFamily: SERIF, fontSize: 24, color: '#111', marginBottom: 12 }}>
+          Ask about {destination}
+        </Text>
 
         {messages.length === 0 ? (
-          <Text className="text-neutral-400 mt-4">
+          <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14, marginTop: 8, lineHeight: 21 }}>
             Ask anything — best time to visit, what to pack, local tips...
           </Text>
         ) : null}
@@ -50,31 +57,41 @@ export function ChatTab({ destination, country }: { destination: string; country
         {messages.map((msg, i) => (
           <View key={i} className="mb-3">
             {msg.role === 'user' ? (
-              <View className="self-end bg-emerald-600 rounded-2xl px-4 py-2 max-w-[85%]">
+              <View className="self-end rounded-2xl px-4 py-2 max-w-[85%]" style={{ backgroundColor: '#111' }}>
                 <Text className="text-white">{msg.text}</Text>
               </View>
             ) : (
-              <View className="self-start bg-neutral-100 rounded-2xl px-4 py-2 max-w-[95%]">
-                <Text className="text-neutral-800">{msg.text}</Text>
+              <View
+                className="self-start rounded-2xl px-4 py-2 max-w-[95%]"
+                style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE' }}
+              >
+                <Text style={{ fontFamily: SERIF, color: '#3F3F46', lineHeight: 21 }}>{msg.text}</Text>
               </View>
             )}
           </View>
         ))}
 
         {sending ? (
-          <View className="self-start bg-neutral-100 rounded-2xl px-4 py-3 mb-3">
-            <ActivityIndicator color="#059669" />
+          <View
+            className="self-start rounded-2xl px-4 py-3 mb-3"
+            style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE' }}
+          >
+            <ActivityIndicator color="#111" />
           </View>
         ) : null}
 
         {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
       </ScrollView>
 
-      <View className="flex-row items-center px-5 pt-2" style={{ paddingBottom: 100 }}>
+      <View
+        className="flex-row items-center px-5 pt-2"
+        style={{ paddingBottom: 100, backgroundColor: '#FDFCFA' }}
+      >
         <TextInput
-          className="flex-1 bg-neutral-100 rounded-full px-4 py-3 text-neutral-900 mr-2"
+          className="flex-1 rounded-full px-4 py-3 mr-2"
+          style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', color: '#111' }}
           placeholder="Ask a question..."
-          placeholderTextColor="#A3A3A3"
+          placeholderTextColor="#B6BAC2"
           value={question}
           onChangeText={setQuestion}
           onSubmitEditing={handleSend}
@@ -83,8 +100,8 @@ export function ChatTab({ destination, country }: { destination: string; country
         <Pressable
           onPress={handleSend}
           disabled={sending || !question.trim()}
-          className="bg-emerald-600 rounded-full w-11 h-11 items-center justify-center"
-          style={{ opacity: sending || !question.trim() ? 0.5 : 1 }}
+          className="rounded-full w-11 h-11 items-center justify-center"
+          style={{ backgroundColor: '#111', opacity: sending || !question.trim() ? 0.4 : 1 }}
         >
           <Text className="text-white text-lg">↑</Text>
         </Pressable>
