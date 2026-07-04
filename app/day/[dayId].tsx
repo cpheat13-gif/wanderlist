@@ -6,6 +6,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
 import { enrichDay, slotStop, swapActivity } from '../../lib/ai';
 import { insertActivityByTime } from '../../lib/itinerary';
@@ -34,6 +35,7 @@ export default function DayDetailScreen() {
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
 
   const [row, setRow] = useState<ItineraryDayRow | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -90,6 +92,9 @@ export default function DayDetailScreen() {
   const country = useMemo(() => parseDestination(trip?.destination ?? null).country, [trip]);
   const activities: ItineraryActivity[] = row?.activities ?? [];
   const isEnriched = activities.some((a) => a.tip || a.timeOfDay);
+  // Only the trip's owner may edit the itinerary (RLS enforces this too).
+  const isOwner = !!trip && !!session && trip.created_by === session.user.id;
+  const NOT_OWNER_MSG = "Only the trip's planner can change the itinerary.";
 
   // Hero + per-activity photos
   useEffect(() => {
@@ -107,6 +112,10 @@ export default function DayDetailScreen() {
 
   async function handleEnrich() {
     if (!row || enriching || activities.length === 0) return;
+    if (!isOwner) {
+      setEnrichError(NOT_OWNER_MSG);
+      return;
+    }
     setEnriching(true);
     setEnrichError(null);
     try {
@@ -130,6 +139,10 @@ export default function DayDetailScreen() {
 
   async function openSwap(i: number) {
     if (!row) return;
+    if (!isOwner) {
+      setEnrichError(NOT_OWNER_MSG);
+      return;
+    }
     setSwapIndex(i);
     setSwapOptions([]);
     setSwapPhotos({});
@@ -183,6 +196,10 @@ export default function DayDetailScreen() {
 
   async function addStop(place: { name: string; category?: Place['category']; notes?: string }) {
     if (!row || addLoading || !place.name.trim()) return;
+    if (!isOwner) {
+      setAddError(NOT_OWNER_MSG);
+      return;
+    }
     setAddLoading(true);
     setAddError(null);
     try {
