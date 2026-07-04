@@ -158,6 +158,7 @@ export default function PlanTripScreen() {
       const { data: existing } = await supabase
         .from('trips')
         .select('id, status')
+        .eq('created_by', session!.user.id)
         .eq('title', destName)
         .in('status', ['idea', 'planning'])
         .limit(1);
@@ -267,10 +268,11 @@ export default function PlanTripScreen() {
   async function persist(daysToSave: ItineraryDay[]) {
     if (!tripId) return;
     setSaving(true);
+    setGenError(null);
     try {
       const total = daysToSave.reduce((sum, d) => sum + (d.estCostPerPersonUsd || 0), 0);
       await supabase.from('itinerary_days').delete().eq('trip_id', tripId);
-      await supabase.from('itinerary_days').insert(
+      const { error: insErr } = await supabase.from('itinerary_days').insert(
         daysToSave.map((d) => ({
           trip_id: tripId,
           day_number: d.day,
@@ -280,11 +282,21 @@ export default function PlanTripScreen() {
           est_cost: d.estCostPerPersonUsd || null,
         }))
       );
-      await supabase
+      if (insErr) throw insErr;
+      const { error: upErr } = await supabase
         .from('trips')
         .update({ travelers, season, est_cost_per_person: total, status: 'planning' })
         .eq('id', tripId);
+      if (upErr) throw upErr;
       setSaved(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not save the itinerary.';
+      setGenError(
+        /row-level security|permission/i.test(msg)
+          ? 'Only the trip’s owner can save its itinerary.'
+          : `Couldn’t save the itinerary — ${msg}`
+      );
+      setSaved(false);
     } finally {
       setSaving(false);
     }
@@ -854,6 +866,12 @@ export default function PlanTripScreen() {
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13, marginBottom: 20 }}>
               {season ?? 'Flexible'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'} · tap a day to open it, or personalize below
             </Text>
+
+            {genError ? (
+              <View style={{ backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 14, padding: 14, marginBottom: 18 }}>
+                <Text style={{ color: '#B91C1C', fontSize: 13, lineHeight: 19 }}>{genError}</Text>
+              </View>
+            ) : null}
 
             {itinerary.map((day, i) => (
               <DayCard key={day.day} day={day} index={i} />
