@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 // eslint-disable-next-line deprecation/deprecation
-import { ActivityIndicator, Clipboard, Dimensions, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Clipboard, Dimensions, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PillButton } from '../PillButton';
+import { ConciergeLoader } from '../ConciergeLoader';
 import { colorForCategory } from '../../theme/colors';
 import { SERIF } from '../../lib/editorial';
-import { exploreDestination, ExploreResult } from '../../lib/ai';
+import { exploreDestination, ExploreResult, slotStop } from '../../lib/ai';
+import { insertActivityByTime } from '../../lib/itinerary';
 import { fetchDestinationPhoto, DestinationPhoto } from '../../lib/unsplash';
 import { supabase } from '../../lib/supabase';
-import { Place, PlaceCategory, TiktokLink, TripStatus } from '../../lib/types';
+import { ItineraryActivity, ItineraryDayRow, Place, PlaceCategory, TiktokLink, TripStatus } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PHOTO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.48);
@@ -102,6 +104,11 @@ export function ExplorerTab({
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [savingLink, setSavingLink] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Add-to-itinerary
+  const [tripDays, setTripDays] = useState<ItineraryDayRow[]>([]);
+  const [dayPickerFor, setDayPickerFor] = useState<{ name: string; category: PlaceCategory; notes?: string } | null>(null);
+  const [slottingDay, setSlottingDay] = useState<string | null>(null);
+  const [slotDone, setSlotDone] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -111,6 +118,42 @@ export function ExplorerTab({
       .order('created_at', { ascending: true })
       .then(({ data }) => setTiktokLinks(data ?? []));
   }, [tripId]);
+
+  useEffect(() => {
+    supabase
+      .from('itinerary_days')
+      .select('*')
+      .eq('trip_id', tripId)
+      .order('day_number', { ascending: true })
+      .then(({ data }) => setTripDays((data ?? []) as ItineraryDayRow[]));
+  }, [tripId]);
+
+  async function slotIntoDay(day: ItineraryDayRow) {
+    if (!dayPickerFor || slottingDay) return;
+    setSlottingDay(day.id);
+    try {
+      const existing = (day.activities ?? []).map((a) => ({ title: a.title, timeOfDay: a.timeOfDay }));
+      const res = await slotStop({
+        destination,
+        country,
+        dayTitle: day.title,
+        daySummary: day.summary,
+        existing,
+        place: dayPickerFor,
+      });
+      const next = insertActivityByTime((day.activities ?? []) as ItineraryActivity[], res.activity as ItineraryActivity);
+      await supabase.from('itinerary_days').update({ activities: next }).eq('id', day.id);
+      setTripDays((prev) => prev.map((d) => (d.id === day.id ? { ...d, activities: next } : d)));
+      setSlotDone(`Added to Day ${day.day_number}`);
+      setDayPickerFor(null);
+      setTimeout(() => setSlotDone(null), 2200);
+    } catch {
+      setSlotDone('Could not add — try again');
+      setTimeout(() => setSlotDone(null), 2200);
+    } finally {
+      setSlottingDay(null);
+    }
+  }
 
   async function handleSaveLink() {
     const url = linkInput.trim();
@@ -724,6 +767,23 @@ export function ExplorerTab({
                       ) : null}
                     </View>
                     <Pressable
+                      onPress={() =>
+                        setDayPickerFor({ name: place.name, category: place.category, notes: place.notes ?? undefined })
+                      }
+                      hitSlop={6}
+                      style={({ pressed }) => ({
+                        borderWidth: 1,
+                        borderColor: '#E5E7EB',
+                        borderRadius: 100,
+                        paddingHorizontal: 11,
+                        paddingVertical: 6,
+                        marginLeft: 8,
+                        transform: [{ scale: pressed ? 0.94 : 1 }],
+                      })}
+                    >
+                      <Text style={{ color: '#111', fontSize: 11.5, fontWeight: '700' }}>＋ Day</Text>
+                    </Pressable>
+                    <Pressable
                       onPress={() => handleToggleBooked(place)}
                       style={{
                         width: 26,
@@ -734,7 +794,7 @@ export function ExplorerTab({
                         borderColor: '#D1D5DB',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginLeft: 10,
+                        marginLeft: 8,
                       }}
                     >
                       {place.is_booked ? (
@@ -935,6 +995,116 @@ export function ExplorerTab({
           ) : null}
         </ScrollView>
       </View>
+
+      {/* ── "Added to Day N" confirmation ── */}
+      {slotDone ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            bottom: insets.bottom + 96,
+            alignSelf: 'center',
+            backgroundColor: '#111',
+            borderRadius: 100,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 12 }}>✓</Text>
+          <Text style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>{slotDone}</Text>
+        </View>
+      ) : null}
+
+      {/* ── Add-to-a-day picker ── */}
+      <Modal
+        visible={!!dayPickerFor}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDayPickerFor(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,17,22,0.35)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => (slottingDay ? null : setDayPickerFor(null))} />
+          <View
+            style={{
+              backgroundColor: '#FDFCFA',
+              borderTopLeftRadius: 26,
+              borderTopRightRadius: 26,
+              maxHeight: SCREEN_HEIGHT * 0.7,
+              paddingTop: 10,
+            }}
+          >
+            <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E0' }} />
+            </View>
+            <View style={{ paddingHorizontal: 22, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0EE' }}>
+              <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }} numberOfLines={1}>
+                Add {dayPickerFor?.name}
+              </Text>
+              <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 12.5 }}>
+                Pick a day — the concierge slots it into the right part.
+              </Text>
+            </View>
+
+            {slottingDay ? (
+              <View style={{ alignItems: 'center', paddingVertical: 34 }}>
+                <ConciergeLoader caption="Slotting it in…" size={54} />
+              </View>
+            ) : (
+              <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20, gap: 10 }}>
+                {tripDays.length === 0 ? (
+                  <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14, lineHeight: 21 }}>
+                    No itinerary yet — build one from the Itinerary tab, then you can drop finds into any day.
+                  </Text>
+                ) : (
+                  tripDays.map((d) => (
+                    <Pressable
+                      key={d.id}
+                      onPress={() => slotIntoDay(d)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'white',
+                        borderWidth: 1,
+                        borderColor: '#F0F0EE',
+                        borderRadius: 16,
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                      })}
+                    >
+                      <View
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 15,
+                          backgroundColor: '#111',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                        }}
+                      >
+                        <Text style={{ color: 'white', fontFamily: SERIF, fontSize: 13 }}>{d.day_number}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontFamily: SERIF, fontSize: 15.5, color: '#111' }} numberOfLines={1}>
+                          {d.title}
+                        </Text>
+                        <Text style={{ color: '#9CA3AF', fontSize: 11.5, marginTop: 1 }}>
+                          {(d.activities ?? []).length} stops
+                        </Text>
+                      </View>
+                      <Text style={{ color: '#111', fontSize: 12.5, fontWeight: '700' }}>Add →</Text>
+                    </Pressable>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

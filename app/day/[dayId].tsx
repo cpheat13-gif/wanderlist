@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { enrichDay, swapActivity } from '../../lib/ai';
+import { enrichDay, slotStop, swapActivity } from '../../lib/ai';
+import { insertActivityByTime } from '../../lib/itinerary';
 import { SERIF, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
 import { ConciergeLoader } from '../../components/ConciergeLoader';
-import { ItineraryActivity, ItineraryDayRow, Trip } from '../../lib/types';
+import { ItineraryActivity, ItineraryDayRow, Place, Trip } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_H = Math.round(SCREEN_HEIGHT * 0.34);
@@ -46,6 +47,12 @@ export default function DayDetailScreen() {
   const [swapOptions, setSwapOptions] = useState<ItineraryActivity[]>([]);
   const [swapPhotos, setSwapPhotos] = useState<Record<number, string>>({});
   const [swapError, setSwapError] = useState<string | null>(null);
+  // Add a stop
+  const [addOpen, setAddOpen] = useState(false);
+  const [addInput, setAddInput] = useState('');
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [tripPlaces, setTripPlaces] = useState<Place[]>([]);
 
   useFocusEffect(useCallback(() => {
     setStatusBarStyle('light');
@@ -69,6 +76,12 @@ export default function DayDetailScreen() {
             .eq('id', r.trip_id)
             .single()
             .then(({ data: t }) => setTrip((t ?? null) as Trip | null));
+          supabase
+            .from('places')
+            .select('*')
+            .eq('trip_id', r.trip_id)
+            .order('created_at', { ascending: true })
+            .then(({ data: p }) => setTripPlaces((p ?? []) as Place[]));
         }
       });
   }, [dayId]);
@@ -166,6 +179,33 @@ export default function DayDetailScreen() {
     setSwapIndex(null);
     setSwapOptions([]);
     await supabase.from('itinerary_days').update({ activities: next }).eq('id', row.id);
+  }
+
+  async function addStop(place: { name: string; category?: Place['category']; notes?: string }) {
+    if (!row || addLoading || !place.name.trim()) return;
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      const res = await slotStop({
+        destination: destName,
+        country,
+        dayTitle: row.title,
+        daySummary: row.summary,
+        existing: activities.map((a) => ({ title: a.title, timeOfDay: a.timeOfDay })),
+        place: { name: place.name.trim(), category: place.category, notes: place.notes ?? undefined },
+      });
+      const next = insertActivityByTime(activities, res.activity as ItineraryActivity);
+      // Indices shift on insert — refetch photos cleanly.
+      setPhotos({});
+      setRow({ ...row, activities: next });
+      await supabase.from('itinerary_days').update({ activities: next }).eq('id', row.id);
+      setAddInput('');
+      setAddOpen(false);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Could not add that stop. Please try again.');
+    } finally {
+      setAddLoading(false);
+    }
   }
 
   function handleBack() {
@@ -366,6 +406,26 @@ export default function DayDetailScreen() {
               </Text>
             </Pressable>
           ) : null}
+
+          {!enriching ? (
+            <Pressable
+              onPress={() => {
+                setAddError(null);
+                setAddOpen(true);
+              }}
+              style={({ pressed }) => ({
+                marginTop: 10,
+                borderWidth: 1.5,
+                borderColor: '#111',
+                borderRadius: 100,
+                paddingVertical: 15,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
+            >
+              <Text style={{ color: '#111', fontSize: 14.5, fontWeight: '700' }}>＋ Add a stop to this day</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -486,6 +546,142 @@ export default function DayDetailScreen() {
                 </Pressable>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Add a stop ── */}
+      <Modal visible={addOpen} animationType="slide" transparent onRequestClose={() => setAddOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,17,22,0.35)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setAddOpen(false)} />
+          <View
+            style={{
+              backgroundColor: '#FDFCFA',
+              borderTopLeftRadius: 26,
+              borderTopRightRadius: 26,
+              maxHeight: HERO_H * 2.2,
+              paddingTop: 10,
+            }}
+          >
+            <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E0' }} />
+            </View>
+            <View style={{ paddingHorizontal: 22, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0EE' }}>
+              <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>Add a stop</Text>
+              <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 12.5 }}>
+                The concierge slots it into the right part of the day.
+              </Text>
+            </View>
+
+            {addLoading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 34 }}>
+                <ConciergeLoader caption="Slotting it in…" size={54} />
+              </View>
+            ) : (
+              <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20 }}>
+                {/* Free text */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'white',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      borderRadius: 100,
+                      paddingHorizontal: 18,
+                      paddingVertical: 12,
+                      color: '#111',
+                      fontSize: 13.5,
+                    }}
+                    placeholder="A place or idea — e.g. rooftop sunset bar"
+                    placeholderTextColor="#B6BAC2"
+                    value={addInput}
+                    onChangeText={setAddInput}
+                    onSubmitEditing={() => addStop({ name: addInput })}
+                    returnKeyType="done"
+                  />
+                  <Pressable
+                    onPress={() => addStop({ name: addInput })}
+                    disabled={!addInput.trim()}
+                    style={({ pressed }) => ({
+                      backgroundColor: '#111',
+                      borderRadius: 100,
+                      paddingHorizontal: 18,
+                      paddingVertical: 12,
+                      opacity: addInput.trim() ? 1 : 0.35,
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
+                    })}
+                  >
+                    <Text style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>Add</Text>
+                  </Pressable>
+                </View>
+
+                {addError ? (
+                  <Text style={{ color: '#B91C1C', fontSize: 12.5, lineHeight: 18, marginBottom: 8 }}>{addError}</Text>
+                ) : null}
+
+                {/* From Explore-added places */}
+                {tripPlaces.length > 0 ? (
+                  <View style={{ marginTop: 14 }}>
+                    <Text
+                      style={{
+                        color: '#9CA3AF',
+                        fontSize: 10,
+                        fontWeight: '700',
+                        letterSpacing: 1.5,
+                        textTransform: 'uppercase',
+                        marginBottom: 10,
+                      }}
+                    >
+                      From your Explore finds
+                    </Text>
+                    {tripPlaces.map((p) => (
+                      <Pressable
+                        key={p.id}
+                        onPress={() => addStop({ name: p.name, category: p.category, notes: p.notes ?? undefined })}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: 'white',
+                          borderWidth: 1,
+                          borderColor: '#F0F0EE',
+                          borderRadius: 14,
+                          paddingHorizontal: 14,
+                          paddingVertical: 12,
+                          marginBottom: 8,
+                          transform: [{ scale: pressed ? 0.98 : 1 }],
+                        })}
+                      >
+                        <View
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: colorForCategory(p.category),
+                            marginRight: 12,
+                          }}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#111', fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+                            {p.name}
+                          </Text>
+                          {p.notes ? (
+                            <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+                              {p.notes}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text style={{ color: '#111', fontSize: 12.5, fontWeight: '700' }}>Add →</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13, marginTop: 14, lineHeight: 20 }}>
+                    Tip: add places from the Explore tab and they'll show up here to drop into any day.
+                  </Text>
+                )}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>

@@ -144,6 +144,18 @@ export interface EnrichedActivity {
   tip: string;
 }
 
+// Slot a chosen place into a day: concierge assigns category, time of day, and a tip.
+export function slotStop(params: {
+  destination: string;
+  country?: string;
+  dayTitle?: string;
+  daySummary?: string;
+  existing: { title: string; timeOfDay?: string }[];
+  place: { name: string; category?: PlaceCategory; notes?: string };
+}): Promise<{ activity: EnrichedActivity }> {
+  return postClaude<{ activity: EnrichedActivity }>({ mode: 'slot', ...params });
+}
+
 // Swap a single stop for alternatives that keep the day coherent.
 export function swapActivity(params: {
   destination: string;

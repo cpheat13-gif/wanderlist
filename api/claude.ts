@@ -151,6 +151,28 @@ const FLIGHT_ESTIMATE_TOOL = {
   },
 };
 
+const SLOT_STOP_TOOL = {
+  name: 'slot_stop',
+  description: 'Turn a place the traveler wants to add into a well-formed stop, slotted into the right time of day.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      activity: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Clean stop name.' },
+          category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
+          description: { type: 'string', description: 'One crisp sentence (~15-20 words).' },
+          timeOfDay: { type: 'string', enum: ['Morning', 'Afternoon', 'Evening'], description: 'Best slot given the day’s existing stops.' },
+          tip: { type: 'string', description: 'One short insider tip.' },
+        },
+        required: ['title', 'category', 'description', 'timeOfDay', 'tip'],
+      },
+    },
+    required: ['activity'],
+  },
+};
+
 const SWAP_ACTIVITY_TOOL = {
   name: 'swap_activity',
   description: 'Suggest a few drop-in replacements for one stop in a day, keeping the day coherent.',
@@ -547,6 +569,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'slot') {
+      const { destination, country, dayTitle, daySummary, existing, place } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!place || typeof place !== 'object' || !place.name) {
+        res.status(400).json({ error: 'place with a name is required' });
+        return;
+      }
+      const userText = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        dayTitle ? `Day: ${dayTitle}` : null,
+        daySummary ? `Day summary: ${daySummary}` : null,
+        `New place to add (JSON): ${JSON.stringify(place)}`,
+        Array.isArray(existing) && existing.length > 0
+          ? `Existing stops that day (do not change): ${JSON.stringify(existing)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await callClaude(
+        'You are a concierge adding ONE stop the traveler chose into an existing day. Turn the place into a ' +
+          'well-formed stop: a clean title, the right category, a one-sentence description, and the time of day ' +
+          'that fits best given the other stops (e.g. a dinner spot → Evening; a museum → Morning/Afternoon). ' +
+          'Add one short insider tip. Do not alter the existing stops.',
+        userText,
+        SLOT_STOP_TOOL,
+        700
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'swap') {
       const { destination, country, dayTitle, daySummary, replace, others } = req.body;
       if (!destination || typeof destination !== 'string') {
@@ -782,7 +839,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'swap', 'airports', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'swap', 'slot', 'airports', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }
