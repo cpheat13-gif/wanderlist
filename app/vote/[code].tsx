@@ -171,7 +171,7 @@ export default function VoteScreen() {
                 marginBottom: 8,
               }}
             >
-              Wanderlist · Trip Poll
+              Getaway Club · Trip Poll
             </Text>
             <Text style={{ fontFamily: SERIF, fontSize: 30, color: '#111', letterSpacing: -0.5, lineHeight: 36 }}>
               {poll.title}
@@ -315,7 +315,7 @@ export default function VoteScreen() {
             </View>
 
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#C4C0B8', fontSize: 12, textAlign: 'center', marginTop: 40 }}>
-              Made with Wanderlist
+              Made with Getaway Club
             </Text>
           </Animated.View>
         </ScrollView>

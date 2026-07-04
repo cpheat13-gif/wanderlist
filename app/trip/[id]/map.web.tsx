@@ -7,7 +7,7 @@ export default function TripMapWebFallback() {
       <View className="flex-1 items-center justify-center px-8">
         <Text className="text-text text-lg font-semibold text-center mb-2">Map not available on web</Text>
         <Text className="text-textMuted text-sm text-center">
-          Open Wanderlist in Expo Go on your phone to see the map of places for this trip.
+          Open Getaway Club in Expo Go on your phone to see the map of places for this trip.
         </Text>
       </View>
     </SafeAreaView>

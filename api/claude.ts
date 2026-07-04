@@ -449,7 +449,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Getaway Club. ' +
           'A traveler describes a trip idea in their own words — sometimes a country, sometimes a vibe ' +
           "(e.g. 'friends hiking trip'). Propose 2-4 specific, well-matched destinations. Be concrete and " +
           'concise, not generic.',
@@ -479,7 +479,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .join('\n');
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a travel app called Wanderlist. ' +
+        'You are a well-traveled trip-planning assistant for a travel app called Getaway Club. ' +
           "Given a chosen destination and the traveler's preferences, build a realistic day-by-day itinerary " +
           '(honor the requested trip length exactly; otherwise 3-7 days) mixing accommodation, food, activities ' +
           'and sightseeing. Give each day a short evocative title and a rough per-person daily cost in USD ' +
@@ -536,7 +536,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .join('\n\n');
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a travel app called Wanderlist, refining a ' +
+        'You are a well-traveled trip-planning assistant for a travel app called Getaway Club, refining a ' +
           'day-by-day itinerary together with the traveler. They may ask to change things, add interests, or ' +
           'ask questions. Always return the COMPLETE updated itinerary (every day, same shape, updated ' +
           'estCostPerPersonUsd per day) — if their message is only a question, answer in the reply and return ' +
@@ -556,7 +556,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
       const result = await callClaude(
-        'You write for the editorial travel magazine Wanderlist. For the given destination — which may be a ' +
+        'You write for the editorial travel magazine Getaway Club. For the given destination — which may be a ' +
           'city, a country, or a whole region like "North America" — produce a full editorial dossier: an ' +
           'evocative tagline, a 2-3 sentence magazine intro, practical key facts, a rough mid-range per-person ' +
           'daily cost in USD, and 3-5 "highlights & local secrets" (marquee experiences done the insider way ' +
@@ -734,7 +734,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const userText = [`Destination: ${destination}${country ? `, ${country}` : ''}`, `Search: ${query}`].join('\n');
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Getaway Club. ' +
           "Given a destination and a search term (which may be a vibe like 'hiking' or 'nightlife', not a literal " +
           'category), suggest specific, well-matched hotels, restaurants, activities, or sightseeing spots there. ' +
           "Classify each result into category 'hotel', 'restaurant', 'activity', or 'sightseeing' regardless of how " +
@@ -772,7 +772,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : [];
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist, currently ' +
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Getaway Club, currently ' +
           `helping a traveler with questions about a trip to ${destination}${country ? `, ${country}` : ''}. ` +
           'Answer their questions helpfully and conversationally, grounded in general knowledge about the destination.',
         [...priorMessages, { role: 'user', content: question }],
@@ -825,7 +825,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .join('\n\n');
 
       const result = await callClaude(
-        'You are a well-traveled trip-planning assistant for a 2-person travel app called Wanderlist. ' +
+        'You are a well-traveled trip-planning assistant for a 2-person travel app called Getaway Club. ' +
           'The traveler has already chosen specific hotels, restaurants, and activities for their trip — your ' +
           'job is only to schedule the given places into a sensible day-by-day plan across the trip dates, not ' +
           'to invent new places. Group logically (e.g. activities earlier in the day, restaurants near meal ' +

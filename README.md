@@ -1,4 +1,4 @@
-# Wanderlist
+# Getaway Club
 
 A private, 2-person travel-planning app. Log trip ideas, attach TikTok
 videos as inspiration, track flights, and once a trip is booked, log

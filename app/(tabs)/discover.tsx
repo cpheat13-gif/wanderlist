@@ -258,7 +258,7 @@ export default function DiscoverScreen() {
               marginBottom: 6,
             }}
           >
-            Wanderlist · The Journal
+            Getaway Club · The Journal
           </Text>
           <Text style={{ fontFamily: SERIF, fontSize: 38, color: '#111', letterSpacing: -0.5 }}>
             Discover

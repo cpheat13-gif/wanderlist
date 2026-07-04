@@ -28,7 +28,7 @@ export default function LoginScreen() {
       >
         <View className="flex-1 justify-center px-6">
           <Text className="text-text text-3xl font-bold uppercase mb-1" style={{ letterSpacing: 2 }}>
-            Wanderlist
+            Getaway Club
           </Text>
           <Text className="text-textMuted text-sm mb-10">
             {mode === 'signIn' ? 'Sign in to keep planning.' : 'Create your account.'}

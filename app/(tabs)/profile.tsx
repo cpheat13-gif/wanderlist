@@ -71,7 +71,7 @@ export default function ProfileScreen() {
           <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>{email}</Text>
           {memberSince ? (
             <Text style={{ color: '#9CA3AF', fontSize: 12.5, marginTop: 4 }}>
-              Traveling with Wanderlist since {memberSince}
+              Traveling with Getaway Club since {memberSince}
             </Text>
           ) : null}
         </View>

@@ -22,7 +22,7 @@ export function PendingApproval() {
             marginBottom: 10,
           }}
         >
-          Wanderlist
+          Getaway Club
         </Text>
         <Text style={{ fontFamily: SERIF, fontSize: 26, color: '#111', textAlign: 'center', lineHeight: 32 }}>
           You&apos;re on the list

@@ -87,7 +87,7 @@ export default function AdminScreen() {
         </Text>
         <Text style={{ fontFamily: SERIF, fontSize: 32, color: '#111', letterSpacing: -0.5 }}>Members</Text>
         <Text style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#6B7280', marginTop: 4, marginBottom: 24 }}>
-          Approve who gets into Wanderlist.
+          Approve who gets into Getaway Club.
         </Text>
 
         {error ? <Text style={{ color: '#B91C1C', fontSize: 13, marginBottom: 16 }}>{error}</Text> : null}

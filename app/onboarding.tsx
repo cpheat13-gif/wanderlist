@@ -21,7 +21,7 @@ const ONBOARDING_KEY = 'wanderlist_onboarded_v1';
 
 const PAGES = [
   {
-    kicker: 'Welcome to Wanderlist',
+    kicker: 'Welcome to Getaway Club',
     title: 'The world,\nbeautifully organized',
     body: 'A travel journal you plan inside. Browse destinations the way you would flip through a magazine — then keep the ones that keep you up at night.',
     photoQuery: 'Santorini caldera sunset aerial dramatic',
