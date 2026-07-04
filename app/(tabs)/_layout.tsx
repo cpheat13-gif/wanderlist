@@ -40,24 +40,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>✓</Text>,
         }}
       />
-      <Tabs.Screen
-        name="past"
-        options={{
-          title: 'Past',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◉</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="polls"
-        options={{
-          title: 'Polls',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▤</Text>,
-        }}
-      />
+      <Tabs.Screen name="past" options={{ href: null }} />
+      <Tabs.Screen name="polls" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{
-          href: null,
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◍</Text>,
         }}
       />
     </Tabs>

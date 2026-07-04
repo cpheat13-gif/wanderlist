@@ -78,13 +78,18 @@ export default function DiscoverScreen() {
 
   // Wishlist state — which editorial destinations already live in the bucket list
   const loadSaved = useCallback(async () => {
-    const { data } = await supabase.from('trips').select('id, title').eq('status', 'idea');
+    if (!session) return;
+    const { data } = await supabase
+      .from('trips')
+      .select('id, title')
+      .eq('status', 'idea')
+      .eq('created_by', session.user.id);
     const map: Record<string, string> = {};
     (data ?? []).forEach((t) => {
       map[t.title] = t.id;
     });
     setSavedByTitle(map);
-  }, []);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {

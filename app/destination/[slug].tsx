@@ -125,15 +125,16 @@ export default function DestinationDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!displayName) return;
+      if (!displayName || !session) return;
       supabase
         .from('trips')
         .select('id')
         .eq('status', 'idea')
+        .eq('created_by', session.user.id)
         .eq('title', displayName)
         .limit(1)
         .then(({ data }) => setSavedTripId(data?.[0]?.id ?? null));
-    }, [displayName])
+    }, [displayName, session])
   );
 
   async function toggleWishlist() {

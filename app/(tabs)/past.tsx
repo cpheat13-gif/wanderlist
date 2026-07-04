@@ -14,20 +14,23 @@ const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48 - 12) / 2);
 
 export default function PastScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!session) return;
     setLoading(true);
+    // Scope to my own past trips — past trips are club-readable, so filter here.
     const { data } = await supabase
       .from('trips')
       .select('*')
       .eq('status', 'past')
+      .eq('created_by', session.user.id)
       .order('created_at', { ascending: false });
     setTrips(data ?? []);
     setLoading(false);
-  }, []);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
