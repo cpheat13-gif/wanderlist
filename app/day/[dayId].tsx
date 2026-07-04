@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { enrichDay } from '../../lib/ai';
+import { enrichDay, swapActivity } from '../../lib/ai';
 import { SERIF, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
 import { ConciergeLoader } from '../../components/ConciergeLoader';
@@ -40,6 +40,12 @@ export default function DayDetailScreen() {
   const [photos, setPhotos] = useState<Record<number, string>>({});
   const [enriching, setEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+  // Per-activity swap
+  const [swapIndex, setSwapIndex] = useState<number | null>(null);
+  const [swapLoading, setSwapLoading] = useState(false);
+  const [swapOptions, setSwapOptions] = useState<ItineraryActivity[]>([]);
+  const [swapPhotos, setSwapPhotos] = useState<Record<number, string>>({});
+  const [swapError, setSwapError] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
     setStatusBarStyle('light');
@@ -107,6 +113,59 @@ export default function DayDetailScreen() {
     } finally {
       setEnriching(false);
     }
+  }
+
+  async function openSwap(i: number) {
+    if (!row) return;
+    setSwapIndex(i);
+    setSwapOptions([]);
+    setSwapPhotos({});
+    setSwapError(null);
+    setSwapLoading(true);
+    const target = activities[i];
+    try {
+      const res = await swapActivity({
+        destination: destName,
+        country,
+        dayTitle: row.title,
+        daySummary: row.summary,
+        replace: { title: target.title, category: target.category, timeOfDay: target.timeOfDay },
+        others: activities
+          .filter((_, j) => j !== i)
+          .map((a) => ({ title: a.title, timeOfDay: a.timeOfDay })),
+      });
+      const opts = res.alternatives as ItineraryActivity[];
+      setSwapOptions(opts);
+      opts.forEach((o, oi) => {
+        fetchDestinationPhoto(`${o.title} ${destName}`).then((p) => {
+          if (p) setSwapPhotos((prev) => ({ ...prev, [oi]: p.url }));
+        });
+      });
+    } catch (err) {
+      setSwapError(err instanceof Error ? err.message : 'Could not find alternatives. Please try again.');
+    } finally {
+      setSwapLoading(false);
+    }
+  }
+
+  async function chooseAlternative(opt: ItineraryActivity, optIndex: number) {
+    if (!row || swapIndex === null) return;
+    const original = activities[swapIndex];
+    // Keep the slot: preserve the original time of day if the alternative omits it.
+    const replacement: ItineraryActivity = {
+      title: opt.title,
+      category: opt.category,
+      description: opt.description,
+      timeOfDay: opt.timeOfDay ?? original.timeOfDay,
+      tip: opt.tip,
+    };
+    const next = activities.map((a, j) => (j === swapIndex ? replacement : a));
+    // Show the chosen photo immediately.
+    if (swapPhotos[optIndex]) setPhotos((prev) => ({ ...prev, [swapIndex]: swapPhotos[optIndex] }));
+    setRow({ ...row, activities: next });
+    setSwapIndex(null);
+    setSwapOptions([]);
+    await supabase.from('itinerary_days').update({ activities: next }).eq('id', row.id);
   }
 
   function handleBack() {
@@ -231,6 +290,26 @@ export default function DayDetailScreen() {
                       </Text>
                     </View>
                   ) : null}
+                  {/* Swap this stop */}
+                  <Pressable
+                    onPress={() => openSwap(i)}
+                    style={({ pressed }) => ({
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      backgroundColor: 'rgba(255,255,255,0.94)',
+                      borderRadius: 100,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                    })}
+                  >
+                    <Text style={{ fontSize: 12, color: '#111' }}>⇄</Text>
+                    <Text style={{ fontSize: 11.5, color: '#111', fontWeight: '700' }}>Swap</Text>
+                  </Pressable>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 }}>
@@ -289,6 +368,127 @@ export default function DayDetailScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      {/* ── Swap chooser ── */}
+      <Modal
+        visible={swapIndex !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSwapIndex(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,17,22,0.35)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setSwapIndex(null)} />
+          <View
+            style={{
+              backgroundColor: '#FDFCFA',
+              borderTopLeftRadius: 26,
+              borderTopRightRadius: 26,
+              maxHeight: HERO_H * 2.1,
+              paddingTop: 10,
+            }}
+          >
+            <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E0' }} />
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                paddingHorizontal: 22,
+                paddingBottom: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#F0F0EE',
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>Swap this stop</Text>
+                <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 12.5 }}>
+                  {swapIndex !== null && activities[swapIndex]
+                    ? `Alternatives for ${activities[swapIndex].title} — the rest of the day stays put.`
+                    : ''}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setSwapIndex(null)}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 12,
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                })}
+              >
+                <Text style={{ color: '#111', fontSize: 15 }}>✕</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20, gap: 12 }}>
+              {swapLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 26 }}>
+                  <ConciergeLoader caption="Finding alternatives…" size={54} />
+                </View>
+              ) : null}
+
+              {swapError ? (
+                <Text style={{ color: '#B91C1C', fontSize: 13, lineHeight: 19 }}>{swapError}</Text>
+              ) : null}
+
+              {swapOptions.map((opt, oi) => (
+                <Pressable
+                  key={`${opt.title}-${oi}`}
+                  onPress={() => chooseAlternative(opt, oi)}
+                  style={({ pressed }) => ({
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#F0F0EE',
+                    borderRadius: 18,
+                    overflow: 'hidden',
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  })}
+                >
+                  <View style={{ height: 130, backgroundColor: '#E9EAEC' }}>
+                    {swapPhotos[oi] ? (
+                      <Image source={{ uri: swapPhotos[oi] }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
+                    ) : (
+                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                        <ActivityIndicator color="#9CA3AF" size="small" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ padding: 14 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colorForCategory(opt.category) }} />
+                      <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
+                        {CATEGORY_LABEL[opt.category] ?? opt.category}
+                        {opt.timeOfDay ? ` · ${opt.timeOfDay}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ fontFamily: SERIF, fontSize: 17, color: '#111', marginBottom: 4 }}>{opt.title}</Text>
+                    <Text style={{ fontFamily: SERIF, color: '#3F3F46', fontSize: 13.5, lineHeight: 20 }}>{opt.description}</Text>
+                    <View
+                      style={{
+                        marginTop: 12,
+                        alignSelf: 'flex-start',
+                        backgroundColor: '#111',
+                        borderRadius: 100,
+                        paddingHorizontal: 16,
+                        paddingVertical: 9,
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>Use this instead</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -151,6 +151,34 @@ const FLIGHT_ESTIMATE_TOOL = {
   },
 };
 
+const SWAP_ACTIVITY_TOOL = {
+  name: 'swap_activity',
+  description: 'Suggest a few drop-in replacements for one stop in a day, keeping the day coherent.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      alternatives: {
+        type: 'array',
+        minItems: 2,
+        maxItems: 3,
+        description: 'Alternatives for the ONE stop being replaced, best first.',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
+            description: { type: 'string', description: 'One crisp sentence (~15-20 words).' },
+            timeOfDay: { type: 'string', enum: ['Morning', 'Afternoon', 'Evening'] },
+            tip: { type: 'string', description: 'One short insider tip.' },
+          },
+          required: ['title', 'category', 'description', 'timeOfDay', 'tip'],
+        },
+      },
+    },
+    required: ['alternatives'],
+  },
+};
+
 const AIRPORT_SEARCH_TOOL = {
   name: 'search_airports',
   description: 'Return airports matching a query (city name, airport name, or partial IATA code).',
@@ -519,6 +547,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'swap') {
+      const { destination, country, dayTitle, daySummary, replace, others } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!replace || typeof replace !== 'object') {
+        res.status(400).json({ error: 'replace is required' });
+        return;
+      }
+      const userText = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        dayTitle ? `Day: ${dayTitle}` : null,
+        daySummary ? `Day summary: ${daySummary}` : null,
+        `Stop to replace (JSON): ${JSON.stringify(replace)}`,
+        Array.isArray(others) && others.length > 0
+          ? `Other stops that day (keep these, don't duplicate): ${JSON.stringify(others)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await callClaude(
+        'You are a concierge swapping ONE stop in an otherwise-good day. Suggest 2-3 alternative stops that fit ' +
+          'the SAME category and time of day as the stop being replaced, sit near the day’s other stops so the ' +
+          'day still flows without extra travel, and do NOT duplicate the other stops. Keep it realistic and ' +
+          'specific to the destination.',
+        userText,
+        SWAP_ACTIVITY_TOOL,
+        1024
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'airports') {
       const { query } = req.body;
       if (!query || typeof query !== 'string') {
@@ -719,7 +782,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'airports', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'swap', 'airports', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

@@ -144,6 +144,18 @@ export interface EnrichedActivity {
   tip: string;
 }
 
+// Swap a single stop for alternatives that keep the day coherent.
+export function swapActivity(params: {
+  destination: string;
+  country?: string;
+  dayTitle?: string;
+  daySummary?: string;
+  replace: { title: string; category: PlaceCategory; timeOfDay?: string };
+  others: { title: string; timeOfDay?: string }[];
+}): Promise<{ alternatives: EnrichedActivity[] }> {
+  return postClaude<{ alternatives: EnrichedActivity[] }>({ mode: 'swap', ...params });
+}
+
 // Deepen one day: order stops Morning→Evening and add an insider tip to each.
 export function enrichDay(params: {
   destination: string;
