@@ -105,3 +105,15 @@ export interface Flight {
   confirmation_number: string | null;
   created_at: string;
 }
+
+export interface Profile {
+  id: string;
+  email: string | null;
+  is_admin: boolean;
+  created_at: string;
+}
+
+// A signup, annotated with whether their email is on the allowlist.
+export interface MemberRow extends Profile {
+  approved: boolean;
+}

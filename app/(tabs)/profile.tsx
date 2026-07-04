@@ -19,7 +19,7 @@ function fmtRange(start: string | null, end: string | null): string | null {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session, signOut, isAdmin } = useAuth();
   const [bookings, setBookings] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -160,6 +160,31 @@ export default function ProfileScreen() {
             })}
           </View>
         )}
+
+        {/* Admin */}
+        {isAdmin ? (
+          <Pressable
+            onPress={() => router.push('/admin')}
+            style={({ pressed }) => ({
+              backgroundColor: 'white',
+              borderWidth: 1,
+              borderColor: '#F0F0EE',
+              borderRadius: 16,
+              paddingVertical: 15,
+              paddingHorizontal: 18,
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: 24,
+              transform: [{ scale: pressed ? 0.99 : 1 }],
+            })}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: SERIF, fontSize: 16, color: '#111' }}>Manage members</Text>
+              <Text style={{ color: '#9CA3AF', fontSize: 12.5, marginTop: 2 }}>Approve who gets access</Text>
+            </View>
+            <Text style={{ color: '#D1D5DB', fontSize: 20 }}>›</Text>
+          </Pressable>
+        ) : null}
 
         {/* Sign out */}
         <Pressable

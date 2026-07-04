@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { PendingApproval } from '../components/PendingApproval';
 
 const headerOptions = {
   headerStyle: { backgroundColor: '#0B0B0E' },
@@ -15,25 +16,38 @@ const headerOptions = {
 } as const;
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, approved, accessLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
+  const inAuthGroup = segments[0] === '(auth)';
+  // Public poll voting page is reachable without a login (the share link is
+  // the access control) — never redirect anonymous voters away from it.
+  const inPublicGroup = segments[0] === 'vote';
+
   useEffect(() => {
     if (loading) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    // Public poll voting page is reachable without a login (the share link is
-    // the access control) — never redirect anonymous voters away from it.
-    const inPublicGroup = segments[0] === 'vote';
     if (!session && !inAuthGroup && !inPublicGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments]);
+  }, [session, loading, inAuthGroup, inPublicGroup]);
 
   if (loading) {
     return <View className="flex-1 bg-bg" />;
+  }
+
+  // Signed in but not yet approved → hold them at the waiting screen (except on
+  // the public vote page, which anyone may reach). Admins are on the allowlist,
+  // so they pass through as approved.
+  if (session && !inAuthGroup && !inPublicGroup) {
+    if (accessLoading) {
+      return <View className="flex-1 bg-bg" />;
+    }
+    if (!approved) {
+      return <PendingApproval />;
+    }
   }
 
   return (
@@ -52,6 +66,7 @@ function RootNavigator() {
       <Stack.Screen name="polls/new" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="polls/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="vote/[code]" options={{ headerShown: false }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );
