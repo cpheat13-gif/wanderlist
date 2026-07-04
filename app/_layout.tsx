@@ -22,7 +22,10 @@ function RootNavigator() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === '(auth)';
-    if (!session && !inAuthGroup) {
+    // Public poll voting page is reachable without a login (the share link is
+    // the access control) — never redirect anonymous voters away from it.
+    const inPublicGroup = segments[0] === 'vote';
+    if (!session && !inAuthGroup && !inPublicGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
@@ -46,6 +49,9 @@ function RootNavigator() {
       <Stack.Screen name="destination/[slug]" options={{ headerShown: false }} />
       <Stack.Screen name="plan/[slug]" options={{ headerShown: false }} />
       <Stack.Screen name="day/[dayId]" options={{ headerShown: false }} />
+      <Stack.Screen name="polls/new" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="polls/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="vote/[code]" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );

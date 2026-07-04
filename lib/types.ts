@@ -62,6 +62,35 @@ export interface TiktokLink {
   created_at: string;
 }
 
+export interface Poll {
+  id: string;
+  created_by: string;
+  title: string;
+  subtitle: string | null;
+  share_code: string;
+  status: string;
+  created_at: string;
+}
+
+export interface PollOption {
+  id: string;
+  poll_id: string;
+  trip_id: string | null;
+  label: string;
+  subtitle: string | null;
+  cover_photo_url: string | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  voter_name: string;
+  created_at: string;
+}
+
 export interface Flight {
   id: string;
   trip_id: string;
