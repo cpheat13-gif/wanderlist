@@ -8,6 +8,7 @@ import { ExplorerTab } from '../../components/discover/ExplorerTab';
 import { FlightsTab } from '../../components/discover/FlightsTab';
 import { ChatTab } from '../../components/discover/ChatTab';
 import { ItineraryTab } from '../../components/discover/ItineraryTab';
+import { MapTab } from '../../components/discover/MapTab';
 import { supabase } from '../../lib/supabase';
 import { DESTINATIONS } from '../../lib/editorial';
 import { ItineraryDayRow, Place, Trip, TripStatus } from '../../lib/types';
@@ -175,11 +176,12 @@ export default function DestinationScreen() {
             onStatusChange={handleStatusChange}
           />
         ) : null}
+        {activeTab === 'map' ? <MapTab tripId={trip.id} destination={name} country={country} /> : null}
         {activeTab === 'flights' ? <FlightsTab tripId={trip.id} destination={name} country={country} /> : null}
         {activeTab === 'chat' ? <ChatTab destination={name} country={country} /> : null}
       </View>
 
-      <DestinationTabBar active={activeTab} onChange={setActiveTab} showItinerary />
+      <DestinationTabBar active={activeTab} onChange={setActiveTab} showItinerary showMap={itineraryRows.length > 0} />
     </View>
   );
 }

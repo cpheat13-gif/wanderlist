@@ -1,9 +1,10 @@
 import { Pressable, Text, View } from 'react-native';
 
-export type DestinationTab = 'itinerary' | 'explorer' | 'flights' | 'chat';
+export type DestinationTab = 'itinerary' | 'map' | 'explorer' | 'flights' | 'chat';
 
 const TABS: { key: DestinationTab; label: string; glyph: string }[] = [
   { key: 'itinerary', label: 'Itinerary', glyph: '☰' },
+  { key: 'map', label: 'Map', glyph: '◎' },
   { key: 'explorer', label: 'Explore', glyph: '⊙' },
   { key: 'flights', label: 'Flights', glyph: '✈︎' },
   { key: 'chat', label: 'Chat', glyph: '✉' },
@@ -13,12 +14,16 @@ export function DestinationTabBar({
   active,
   onChange,
   showItinerary = false,
+  showMap = false,
 }: {
   active: DestinationTab;
   onChange: (tab: DestinationTab) => void;
   showItinerary?: boolean;
+  showMap?: boolean;
 }) {
-  const tabs = showItinerary ? TABS : TABS.filter((t) => t.key !== 'itinerary');
+  const tabs = TABS.filter(
+    (t) => (t.key !== 'itinerary' || showItinerary) && (t.key !== 'map' || showMap)
+  );
   return (
     <View className="absolute left-5 right-5 bottom-6 flex-row bg-white rounded-full px-2 py-2 shadow-lg">
       {tabs.map((tab) => {

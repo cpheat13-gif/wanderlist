@@ -27,6 +27,19 @@ export interface ItineraryActivity {
   // Added by the day "Go deeper" enrichment (optional).
   timeOfDay?: string;
   tip?: string;
+  // Approximate coordinates for the map (filled by the AI "locate" pass).
+  lat?: number;
+  lng?: number;
+}
+
+// A single located stop for the itinerary map.
+export interface MapStop {
+  ref: string;
+  title: string;
+  lat: number;
+  lng: number;
+  dayNumber: number;
+  color: string;
 }
 
 export interface ItineraryDayRow {

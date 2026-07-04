@@ -126,6 +126,21 @@ export function estimateFlight(params: {
   return postClaude<FlightEstimate>({ mode: 'flight', ...params });
 }
 
+export interface LocatedStop {
+  ref: string;
+  lat: number;
+  lng: number;
+}
+
+// Approximate coordinates for a batch of named itinerary stops, keyed by ref.
+export function locateStops(params: {
+  destination: string;
+  country?: string;
+  stops: { ref: string; title: string }[];
+}): Promise<{ located: LocatedStop[] }> {
+  return postClaude<{ located: LocatedStop[] }>({ mode: 'locate', ...params });
+}
+
 export interface Airport {
   code: string;
   city: string;

@@ -156,6 +156,29 @@ const FLIGHT_ESTIMATE_TOOL = {
   },
 };
 
+const LOCATE_STOPS_TOOL = {
+  name: 'locate_stops',
+  description: 'Return approximate latitude/longitude for each named stop on a trip.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      located: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            ref: { type: 'string', description: 'The stop ref, exactly as provided.' },
+            lat: { type: 'number', description: 'Approximate latitude in decimal degrees.' },
+            lng: { type: 'number', description: 'Approximate longitude in decimal degrees.' },
+          },
+          required: ['ref', 'lat', 'lng'],
+        },
+      },
+    },
+    required: ['located'],
+  },
+};
+
 const SLOT_STOP_TOOL = {
   name: 'slot_stop',
   description: 'Turn a place the traveler wants to add into a well-formed stop, slotted into the right time of day.',
@@ -727,6 +750,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'locate') {
+      const { destination, country, stops } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      if (!Array.isArray(stops) || stops.length === 0) {
+        res.status(400).json({ error: 'stops is required' });
+        return;
+      }
+      const list = stops
+        .filter((s: unknown): s is { ref: string; title: string } =>
+          !!s && typeof (s as { ref?: unknown }).ref === 'string' && typeof (s as { title?: unknown }).title === 'string'
+        )
+        .map((s) => `- ref ${s.ref}: ${s.title}`)
+        .join('\n');
+      const userText = `Destination: ${destination}${country ? `, ${country}` : ''}\nStops:\n${list}`;
+      const result = await callClaude(
+        'You are a geographer for a travel app. Given a destination and a list of named stops (each with a ref), ' +
+          'return an approximate latitude/longitude in decimal degrees for each stop, keyed by its ref. Use your ' +
+          'knowledge of well-known places; if a stop is vague or unknown, use the most likely spot within the ' +
+          'destination, or the destination’s city center as a fallback. Never omit a ref.',
+        userText,
+        LOCATE_STOPS_TOOL,
+        2048
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'explore') {
       const { destination, country, query } = req.body;
       if (!destination || typeof destination !== 'string') {
@@ -845,7 +898,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'swap', 'slot', 'airports', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'locate', 'dayplan', 'swap', 'slot', 'airports', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }
