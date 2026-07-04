@@ -26,35 +26,66 @@ export default function VoteScreen() {
   const [votes, setVotes] = useState<PollVote[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [voted, setVoted] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const fade = useRef(new Animated.Value(0)).current;
+  const unsubRef = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
-    let unsub: (() => void) | undefined;
+    let cancelled = false;
+    setLoading(true);
+    setNotFound(false);
+    setLoadError(false);
     (async () => {
-      if (!code) return;
-      const res = await fetchPollByCode(code);
-      if (!res) {
-        setNotFound(true);
-        setLoading(false);
+      if (!code) {
+        if (!cancelled) {
+          setNotFound(true);
+          setLoading(false);
+        }
         return;
       }
-      setPoll(res.poll);
-      setOptions(res.options);
-      setVotes(await fetchVotes(res.poll.id));
-      setLoading(false);
-      Animated.timing(fade, { toValue: 1, duration: 450, useNativeDriver: true }).start();
-      unsub = subscribeVotes(res.poll.id, async () => {
+      try {
+        // Never let a voter sit on a blank spinner forever if the network stalls.
+        const res = await Promise.race([
+          fetchPollByCode(code),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
+        ]);
+        if (cancelled) return;
+        if (!res) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        setPoll(res.poll);
+        setOptions(res.options);
         setVotes(await fetchVotes(res.poll.id));
-      });
+        if (cancelled) return;
+        setLoading(false);
+        Animated.timing(fade, { toValue: 1, duration: 450, useNativeDriver: true }).start();
+        unsubRef.current = subscribeVotes(res.poll.id, async () => {
+          const fresh = await fetchVotes(res.poll.id);
+          if (!cancelled) setVotes(fresh);
+        });
+      } catch {
+        // Network/backend failure — never trap a voter on a blank spinner.
+        if (!cancelled) {
+          setLoadError(true);
+          setLoading(false);
+        }
+      }
     })();
-    return () => unsub?.();
+    return () => {
+      cancelled = true;
+      unsubRef.current?.();
+      unsubRef.current = undefined;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code]);
+  }, [code, attempt]);
 
   const refreshVotes = useCallback(async () => {
     if (poll) setVotes(await fetchVotes(poll.id));
@@ -78,6 +109,32 @@ export default function VoteScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color="#111" />
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FDFCFA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36 }}>
+        <Text style={{ fontSize: 40, marginBottom: 14 }}>📡</Text>
+        <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111', marginBottom: 6, textAlign: 'center' }}>
+          Couldn&apos;t load this poll
+        </Text>
+        <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 22 }}>
+          Check your connection and try again.
+        </Text>
+        <Pressable
+          onPress={() => setAttempt((a) => a + 1)}
+          style={({ pressed }) => ({
+            backgroundColor: '#111',
+            borderRadius: 100,
+            paddingVertical: 13,
+            paddingHorizontal: 32,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 14, fontWeight: '700' }}>Try again</Text>
+        </Pressable>
       </SafeAreaView>
     );
   }

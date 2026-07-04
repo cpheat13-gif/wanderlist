@@ -21,13 +21,20 @@ export default function PollDetailScreen() {
   useEffect(() => {
     let unsub: (() => void) | undefined;
     (async () => {
-      if (!id) return;
-      const res = await fetchPollById(id);
-      if (res) {
-        setPoll(res.poll);
-        setOptions(res.options);
-        setVotes(await fetchVotes(res.poll.id));
-        unsub = subscribeVotes(res.poll.id, async () => setVotes(await fetchVotes(res.poll.id)));
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetchPollById(id);
+        if (res) {
+          setPoll(res.poll);
+          setOptions(res.options);
+          setVotes(await fetchVotes(res.poll.id));
+          unsub = subscribeVotes(res.poll.id, async () => setVotes(await fetchVotes(res.poll.id)));
+        }
+      } catch {
+        // fall through to the "Poll not found" state rather than hang on the spinner
       }
       setLoading(false);
     })();
