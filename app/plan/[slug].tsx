@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -110,8 +112,22 @@ export default function PlanTripScreen() {
   const [genError, setGenError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const autoSaveRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  const sheetScrollRef = useRef<ScrollView>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  function showToast(message: string) {
+    setToast(message);
+    toastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 1, duration: 220, useNativeDriver: false }),
+      Animated.delay(2400),
+      Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: false }),
+    ]).start(() => setToast(null));
+  }
 
   useFocusEffect(useCallback(() => {
     setStatusBarStyle('light');
@@ -292,10 +308,26 @@ export default function PlanTripScreen() {
         history: chat.slice(-6),
       });
       const cleanDays = normalizeDays(res.days);
-      if (cleanDays.length > 0) setItinerary(cleanDays);
+      if (cleanDays.length > 0) {
+        // Which days actually changed? Powers the "Updated Day N" toast.
+        const changed = cleanDays
+          .filter((d) => {
+            const prev = itinerary.find((p) => p.day === d.day);
+            return !prev || JSON.stringify(prev) !== JSON.stringify(d);
+          })
+          .map((d) => d.day);
+        setItinerary(cleanDays);
+        showToast(
+          changed.length === 1
+            ? `Updated Day ${changed[0]}`
+            : changed.length > 1
+              ? `Updated ${changed.length} days`
+              : 'Itinerary updated'
+        );
+      }
       setSaved(false);
       setChat((prev) => [...prev, { role: 'assistant', text: res.reply }]);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+      setTimeout(() => sheetScrollRef.current?.scrollToEnd({ animated: true }), 250);
     } catch (err) {
       setChat((prev) => [
         ...prev,
@@ -820,7 +852,7 @@ export default function PlanTripScreen() {
               ) : null}
             </View>
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13, marginBottom: 20 }}>
-              {season ?? 'Flexible'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'} · refine anything below
+              {season ?? 'Flexible'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'} · tap a day to open it, or personalize below
             </Text>
 
             {itinerary.map((day, i) => (
@@ -844,58 +876,6 @@ export default function PlanTripScreen() {
               </Text>
             ) : null}
 
-            {/* Chat thread */}
-            {chat.length > 0 ? (
-              <View style={{ marginTop: 26, gap: 10 }}>
-                <View style={{ width: 28, height: 2, backgroundColor: '#111' }} />
-                <Text style={{ fontFamily: SERIF, fontSize: 19, color: '#111', marginBottom: 4 }}>
-                  The conversation
-                </Text>
-                {chat.map((m, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                      maxWidth: '86%',
-                      backgroundColor: m.role === 'user' ? '#111' : 'white',
-                      borderWidth: m.role === 'user' ? 0 : 1,
-                      borderColor: '#F0F0EE',
-                      borderRadius: 16,
-                      borderBottomRightRadius: m.role === 'user' ? 4 : 16,
-                      borderBottomLeftRadius: m.role === 'user' ? 16 : 4,
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: m.role === 'user' ? 'white' : '#3F3F46',
-                        fontSize: 13.5,
-                        lineHeight: 20,
-                        fontFamily: m.role === 'assistant' ? SERIF : undefined,
-                      }}
-                    >
-                      {m.text}
-                    </Text>
-                  </View>
-                ))}
-                {refining ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ActivityIndicator color="#9CA3AF" size="small" />
-                    <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13 }}>
-                      Reworking the plan…
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : refining ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20 }}>
-                <ActivityIndicator color="#9CA3AF" size="small" />
-                <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13 }}>
-                  Reworking the plan…
-                </Text>
-              </View>
-            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -916,44 +896,44 @@ export default function PlanTripScreen() {
         }}
       >
         {phase === 'builder' ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <TextInput
+          <Pressable
+            onPress={() => {
+              setChatOpen(true);
+              setTimeout(() => sheetScrollRef.current?.scrollToEnd({ animated: false }), 120);
+            }}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: 'white',
+              borderWidth: 1,
+              borderColor: '#E5E7EB',
+              borderRadius: 100,
+              paddingLeft: 18,
+              paddingRight: 6,
+              paddingVertical: 6,
+              marginBottom: 12,
+              transform: [{ scale: pressed ? 0.99 : 1 }],
+            })}
+          >
+            <Text style={{ color: '#9CA3AF', fontSize: 13.5 }}>
+              {chat.length > 0 ? 'Personalize further…' : 'Ask or wish for anything…'}
+            </Text>
+            <View
               style={{
-                flex: 1,
-                backgroundColor: 'white',
-                borderWidth: 1,
-                borderColor: '#E5E7EB',
-                borderRadius: 100,
-                paddingHorizontal: 18,
-                paddingVertical: 12,
-                color: '#111',
-                fontSize: 13.5,
-              }}
-              placeholder="Ask or wish for anything…"
-              placeholderTextColor="#B6BAC2"
-              value={chatInput}
-              onChangeText={setChatInput}
-              onSubmitEditing={() => sendRefinement(chatInput)}
-              editable={!refining}
-              returnKeyType="send"
-            />
-            <Pressable
-              onPress={() => sendRefinement(chatInput)}
-              disabled={refining || !chatInput.trim()}
-              style={({ pressed }) => ({
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#111',
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                opacity: refining || !chatInput.trim() ? 0.35 : 1,
-                transform: [{ scale: pressed ? 0.9 : 1 }],
-              })}
+                gap: 6,
+                backgroundColor: '#111',
+                borderRadius: 100,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+              }}
             >
-              <Text style={{ color: 'white', fontSize: 16 }}>↑</Text>
-            </Pressable>
-          </View>
+              <Text style={{ color: 'white', fontSize: 13 }}>✦</Text>
+              <Text style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>Personalize</Text>
+            </View>
+          </Pressable>
         ) : null}
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -1020,6 +1000,213 @@ export default function PlanTripScreen() {
           ) : null}
         </View>
       </View>
+
+      {/* ── "Updated" toast ── */}
+      {toast ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: insets.top + 12,
+            alignSelf: 'center',
+            backgroundColor: '#111',
+            borderRadius: 100,
+            paddingHorizontal: 18,
+            paddingVertical: 9,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 7,
+            opacity: toastAnim,
+            transform: [
+              { translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) },
+            ],
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 12 }}>✓</Text>
+          <Text style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>{toast}</Text>
+        </Animated.View>
+      ) : null}
+
+      {/* ── Personalize chat sheet ── */}
+      <Modal visible={chatOpen} animationType="slide" transparent onRequestClose={() => setChatOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,17,22,0.35)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setChatOpen(false)} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View
+              style={{
+                backgroundColor: '#FDFCFA',
+                borderTopLeftRadius: 26,
+                borderTopRightRadius: 26,
+                maxHeight: SCREEN_HEIGHT * 0.8,
+                paddingTop: 10,
+              }}
+            >
+              {/* grabber + header */}
+              <View style={{ alignItems: 'center', paddingBottom: 6 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E0' }} />
+              </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 22,
+                  paddingBottom: 10,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#F0F0EE',
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>Personalize</Text>
+                  <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 12.5 }}>
+                    Tell the concierge what you'd love
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setChatOpen(false)}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: pressed ? 0.9 : 1 }],
+                  })}
+                >
+                  <Text style={{ color: '#111', fontSize: 15 }}>✕</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                ref={sheetScrollRef}
+                style={{ maxHeight: SCREEN_HEIGHT * 0.5 }}
+                contentContainerStyle={{ padding: 20, gap: 10 }}
+                onContentSizeChange={() => sheetScrollRef.current?.scrollToEnd({ animated: true })}
+              >
+                {chat.length === 0 ? (
+                  <View style={{ gap: 10 }}>
+                    <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14, lineHeight: 21 }}>
+                      Try “more local food, less museums”, “make day 3 relaxed”, or ask “is this doable with kids?”
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                      {['More hidden gems', 'Slower pace', 'More food', 'Tighter budget'].map((s) => (
+                        <Pressable
+                          key={s}
+                          onPress={() => sendRefinement(s)}
+                          disabled={refining}
+                          style={({ pressed }) => ({
+                            borderWidth: 1,
+                            borderColor: '#E5E7EB',
+                            borderRadius: 100,
+                            paddingHorizontal: 13,
+                            paddingVertical: 7,
+                            opacity: refining ? 0.4 : 1,
+                            transform: [{ scale: pressed ? 0.95 : 1 }],
+                          })}
+                        >
+                          <Text style={{ color: '#6B7280', fontSize: 12.5, fontWeight: '600' }}>{s}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {chat.map((m, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '86%',
+                      backgroundColor: m.role === 'user' ? '#111' : 'white',
+                      borderWidth: m.role === 'user' ? 0 : 1,
+                      borderColor: '#F0F0EE',
+                      borderRadius: 16,
+                      borderBottomRightRadius: m.role === 'user' ? 4 : 16,
+                      borderBottomLeftRadius: m.role === 'user' ? 16 : 4,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: m.role === 'user' ? 'white' : '#3F3F46',
+                        fontSize: 13.5,
+                        lineHeight: 20,
+                        fontFamily: m.role === 'assistant' ? SERIF : undefined,
+                      }}
+                    >
+                      {m.text}
+                    </Text>
+                  </View>
+                ))}
+
+                {refining ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' }}>
+                    <ActivityIndicator color="#9CA3AF" size="small" />
+                    <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 13 }}>
+                      Reworking the plan…
+                    </Text>
+                  </View>
+                ) : null}
+              </ScrollView>
+
+              {/* input */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingHorizontal: 20,
+                  paddingTop: 10,
+                  paddingBottom: insets.bottom + 14,
+                  borderTopWidth: 1,
+                  borderTopColor: '#F0F0EE',
+                }}
+              >
+                <TextInput
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    borderRadius: 100,
+                    paddingHorizontal: 18,
+                    paddingVertical: 12,
+                    color: '#111',
+                    fontSize: 13.5,
+                  }}
+                  placeholder="Ask or wish for anything…"
+                  placeholderTextColor="#B6BAC2"
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  onSubmitEditing={() => sendRefinement(chatInput)}
+                  editable={!refining}
+                  returnKeyType="send"
+                  autoFocus
+                />
+                <Pressable
+                  onPress={() => sendRefinement(chatInput)}
+                  disabled={refining || !chatInput.trim()}
+                  style={({ pressed }) => ({
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: '#111',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: refining || !chatInput.trim() ? 0.35 : 1,
+                    transform: [{ scale: pressed ? 0.9 : 1 }],
+                  })}
+                >
+                  <Text style={{ color: 'white', fontSize: 16 }}>↑</Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
