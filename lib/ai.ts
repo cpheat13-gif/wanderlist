@@ -124,6 +124,18 @@ export function estimateFlight(params: {
   return postClaude<FlightEstimate>({ mode: 'flight', ...params });
 }
 
+export interface Airport {
+  code: string;
+  city: string;
+  name: string;
+  country: string;
+}
+
+// AI airport lookup — accepts a city, airport name, or partial IATA code.
+export function searchAirports(query: string): Promise<{ airports: Airport[] }> {
+  return postClaude<{ airports: Airport[] }>({ mode: 'airports', query });
+}
+
 export interface EnrichedActivity {
   title: string;
   category: PlaceCategory;

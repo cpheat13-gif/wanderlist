@@ -22,6 +22,7 @@ import { buildItinerary, refineItinerary, FlightEstimate, ItineraryDay } from '.
 import { SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
 import { ConciergeLoader } from '../../components/ConciergeLoader';
+import { AirportSearch } from '../../components/AirportSearch';
 import { ItineraryDayRow } from '../../lib/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -689,26 +690,12 @@ export default function PlanTripScreen() {
                   Where would you fly from?
                 </Text>
                 <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginBottom: 22 }}>
-                  Your home airport(s), so the flight estimate is real — not a guess. Optional.
+                  Search any city or airport code, so the flight estimate is real — not a guess. Optional.
                 </Text>
-                <TextInput
-                  style={{
-                    backgroundColor: 'white',
-                    borderWidth: 1,
-                    borderColor: '#F0F0EE',
-                    borderRadius: 16,
-                    paddingHorizontal: 18,
-                    paddingVertical: 16,
-                    color: '#111',
-                    fontSize: 15,
-                  }}
-                  placeholder="e.g. SFO, or New York (JFK/EWR)"
-                  placeholderTextColor="#B6BAC2"
+                <AirportSearch
                   value={departureCity}
-                  onChangeText={setDepartureCity}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  returnKeyType="done"
+                  onChange={setDepartureCity}
+                  placeholder="Search a city or airport (e.g. Denver, DEN)"
                 />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
                   {['New York (JFK)', 'Los Angeles (LAX)', 'London (LHR)', 'Chicago (ORD)'].map((city) => (

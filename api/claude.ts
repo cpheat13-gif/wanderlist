@@ -151,6 +151,33 @@ const FLIGHT_ESTIMATE_TOOL = {
   },
 };
 
+const AIRPORT_SEARCH_TOOL = {
+  name: 'search_airports',
+  description: 'Return airports matching a query (city name, airport name, or partial IATA code).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      airports: {
+        type: 'array',
+        minItems: 0,
+        maxItems: 6,
+        description: 'Best matches, most relevant first.',
+        items: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', description: '3-letter IATA code, e.g. JFK.' },
+            city: { type: 'string', description: 'City served, e.g. New York.' },
+            name: { type: 'string', description: 'Airport name, e.g. John F. Kennedy International.' },
+            country: { type: 'string', description: 'Country, e.g. USA.' },
+          },
+          required: ['code', 'city', 'name', 'country'],
+        },
+      },
+    },
+    required: ['airports'],
+  },
+};
+
 const ENRICH_DAY_TOOL = {
   name: 'enrich_day',
   description: 'Deepen a single day of an itinerary: assign each stop a time of day and an insider tip.',
@@ -492,6 +519,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'airports') {
+      const { query } = req.body;
+      if (!query || typeof query !== 'string') {
+        res.status(400).json({ error: 'query is required' });
+        return;
+      }
+      const result = await callClaude(
+        'You are an airport lookup for a travel app. Given a partial query — a city, an airport name, or a ' +
+          'partial IATA code — return the most relevant real airports (major international hubs first). Include ' +
+          'all sensible airports for a city (e.g. New York → JFK, EWR, LGA). Codes must be real 3-letter IATA ' +
+          'codes. Return an empty list if nothing plausibly matches.',
+        `Query: ${query}`,
+        AIRPORT_SEARCH_TOOL,
+        1024
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'dayplan') {
       const { destination, country, title, summary, activities } = req.body;
       if (!destination || typeof destination !== 'string') {
@@ -673,7 +719,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'dayplan', 'airports', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }
