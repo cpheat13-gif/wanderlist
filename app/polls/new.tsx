@@ -54,7 +54,7 @@ export default function NewPollScreen() {
     if (!session || !canCreate || creating) return;
     setCreating(true);
     setError(null);
-    const poll = await createPoll(session.user.id, {
+    const { poll, error: createErr } = await createPoll(session.user.id, {
       title: title.trim(),
       options: selectedTrips.map((t) => ({
         trip_id: t.id,
@@ -66,7 +66,7 @@ export default function NewPollScreen() {
     if (poll) {
       router.replace(`/polls/${poll.id}`);
     } else {
-      setError('Could not create the poll. Please try again.');
+      setError(createErr ?? 'Could not create the poll. Please try again.');
       setCreating(false);
     }
   }

@@ -27,12 +27,28 @@ export interface NewPollOption {
   cover_photo_url?: string | null;
 }
 
+export interface CreatePollResult {
+  poll: Poll | null;
+  error: string | null;
+}
+
+// Human-readable hint for the failure modes we can actually anticipate.
+function explainPollError(err: { code?: string; message?: string }): string {
+  const code = err.code ?? '';
+  const msg = err.message ?? 'Unknown error';
+  if (code === '42P01') return 'The polls tables are missing — run the 0009_polls.sql migration in Supabase.';
+  if (code === '42501' || /row-level security/i.test(msg))
+    return 'Permission denied by the database (RLS). Make sure you are signed in and the 0009_polls.sql policies are in place.';
+  return msg;
+}
+
 // Create a poll with its options. Retries on the (rare) share-code collision.
 export async function createPoll(
   createdBy: string,
   params: { title: string; subtitle?: string | null; options: NewPollOption[] }
-): Promise<Poll | null> {
+): Promise<CreatePollResult> {
   let poll: Poll | null = null;
+  let lastError: string | null = null;
   for (let attempt = 0; attempt < 4 && !poll; attempt++) {
     const { data, error } = await supabase
       .from('polls')
@@ -45,10 +61,15 @@ export async function createPoll(
       })
       .select()
       .single();
-    if (!error && data) poll = data as Poll;
-    else if (error && error.code !== '23505') return null; // non-collision error
+    if (!error && data) {
+      poll = data as Poll;
+    } else if (error && error.code !== '23505') {
+      return { poll: null, error: explainPollError(error) }; // non-collision error
+    } else if (error) {
+      lastError = 'Could not generate a unique share code. Please try again.';
+    }
   }
-  if (!poll) return null;
+  if (!poll) return { poll: null, error: lastError ?? 'Could not create the poll. Please try again.' };
 
   const rows = params.options.map((o, i) => ({
     poll_id: poll!.id,
@@ -58,8 +79,9 @@ export async function createPoll(
     cover_photo_url: o.cover_photo_url ?? null,
     display_order: i,
   }));
-  await supabase.from('poll_options').insert(rows);
-  return poll;
+  const { error: optErr } = await supabase.from('poll_options').insert(rows);
+  if (optErr) return { poll, error: explainPollError(optErr) };
+  return { poll, error: null };
 }
 
 export interface PollWithOptions {
