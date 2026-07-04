@@ -137,6 +137,34 @@ export interface Profile {
   created_at: string;
 }
 
+export type TripRole = 'owner' | 'editor' | 'viewer';
+
+export interface TripMemberRow {
+  trip_id: string;
+  user_id: string;
+  role: 'editor' | 'viewer';
+  added_by: string | null;
+  created_at: string;
+}
+
+// A person on a trip, ready to render (owner included, with their email).
+export interface TripMemberDisplay {
+  userId: string;
+  email: string | null;
+  role: TripRole;
+  isOwner: boolean;
+  isSelf: boolean;
+}
+
+export interface TripInvite {
+  id: string;
+  trip_id: string;
+  code: string;
+  role: 'editor' | 'viewer';
+  created_by: string | null;
+  created_at: string;
+}
+
 // A signup, annotated with whether their email is on the allowlist.
 export interface MemberRow extends Profile {
   approved: boolean;

@@ -66,6 +66,8 @@ function RootNavigator() {
       <Stack.Screen name="polls/new" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="polls/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="vote/[code]" options={{ headerShown: false }} />
+      <Stack.Screen name="join/[code]" options={{ headerShown: false }} />
+      <Stack.Screen name="share-trip/[id]" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>

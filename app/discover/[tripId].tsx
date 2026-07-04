@@ -18,14 +18,32 @@ function parseDestination(destination: string | null): { name: string; country?:
   return { name, country: rest.length > 0 ? rest.join(', ') : undefined };
 }
 
-function SecondaryHeader({ title, onBack }: { title: string; onBack: () => void }) {
+function SecondaryHeader({ title, onBack, onShare }: { title: string; onBack: () => void; onShare: () => void }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={{ paddingTop: insets.top + 4, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
       <Pressable onPress={onBack} style={{ marginRight: 12, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 22, color: '#111' }}>←</Text>
       </Pressable>
-      <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>{title}</Text>
+      <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#111' }} numberOfLines={1}>{title}</Text>
+      <Pressable
+        onPress={onShare}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          borderWidth: 1,
+          borderColor: '#E5E7EB',
+          borderRadius: 100,
+          paddingVertical: 7,
+          paddingHorizontal: 14,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        })}
+      >
+        <Text style={{ fontSize: 13, color: '#111' }}>⇪</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111' }}>Share</Text>
+      </Pressable>
     </View>
   );
 }
@@ -134,7 +152,7 @@ export default function DestinationScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#FDFCFA' }}>
       {activeTab !== 'explorer' ? (
-        <SecondaryHeader title={trip.title} onBack={handleBack} />
+        <SecondaryHeader title={trip.title} onBack={handleBack} onShare={() => router.push(`/share-trip/${trip.id}`)} />
       ) : null}
 
       <View style={{ flex: 1 }}>
