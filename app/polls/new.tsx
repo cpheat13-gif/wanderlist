@@ -6,8 +6,11 @@ import { Image } from 'expo-image';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { createPoll } from '../../lib/poll';
+import { buildOptionDetail } from '../../lib/pollSnapshot';
 import { SERIF } from '../../lib/editorial';
 import { Trip } from '../../lib/types';
+import { AirportSearch } from '../../components/AirportSearch';
+import { ConciergeLoader } from '../../components/ConciergeLoader';
 
 function subtitleFor(trip: Trip): string | null {
   if (trip.destination && trip.destination !== trip.title) {
@@ -23,6 +26,7 @@ export default function NewPollScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
+  const [origin, setOrigin] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,13 +58,17 @@ export default function NewPollScreen() {
     if (!session || !canCreate || creating) return;
     setCreating(true);
     setError(null);
+    // Snapshot each trip's detail (cost, flight time, gallery, itinerary) so
+    // anonymous voters can dig in. Built while the creator is signed in.
+    const details = await Promise.all(selectedTrips.map((t) => buildOptionDetail(t, origin)));
     const { poll, error: createErr } = await createPoll(session.user.id, {
       title: title.trim(),
-      options: selectedTrips.map((t) => ({
+      options: selectedTrips.map((t, i) => ({
         trip_id: t.id,
         label: t.title,
         subtitle: subtitleFor(t),
         cover_photo_url: t.cover_photo_url,
+        detail: details[i],
       })),
     });
     if (poll) {
@@ -101,6 +109,14 @@ export default function NewPollScreen() {
           value={title}
           onChangeText={setTitle}
         />
+
+        <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+          Where's everyone flying from? · optional
+        </Text>
+        <AirportSearch value={origin} onChange={setOrigin} placeholder="Home airport (for flight times)" />
+        <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 12.5, marginTop: 8, marginBottom: 24 }}>
+          Adds an estimated flight time to each option so voters can weigh the trek.
+        </Text>
 
         <View style={{ width: 28, height: 2, backgroundColor: '#111', marginBottom: 10 }} />
         <Text style={{ fontFamily: SERIF, fontSize: 21, color: '#111', marginBottom: 4 }}>Pick the options</Text>
@@ -207,6 +223,23 @@ export default function NewPollScreen() {
           )}
         </Pressable>
       </View>
+
+      {creating ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(253,252,250,0.96)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ConciergeLoader caption="Putting the options together…" />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }

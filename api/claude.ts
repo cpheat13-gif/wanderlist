@@ -145,9 +145,14 @@ const FLIGHT_ESTIMATE_TOOL = {
       fromCity: { type: 'string', description: "Resolved origin as 'City (CODE)', e.g. 'San Francisco (SFO)'." },
       toCity: { type: 'string', description: "Resolved destination as 'City (CODE)', e.g. 'Denpasar (DPS)'." },
       estimatedRoundTripUsd: { type: 'number', description: 'Rough round-trip economy fare in USD, rounded.' },
+      flightTime: {
+        type: 'string',
+        description: "Approx one-way travel time as a short label, e.g. '≈8h nonstop' or '≈14h, 1 stop'. Account for typical layovers when there is no common nonstop.",
+      },
+      nonstop: { type: 'boolean', description: 'True if a nonstop is commonly available on this route.' },
       note: { type: 'string', description: 'Brief caveat that this is a rough, non-live estimate.' },
     },
-    required: ['fromCity', 'toCity', 'estimatedRoundTripUsd', 'note'],
+    required: ['fromCity', 'toCity', 'estimatedRoundTripUsd', 'flightTime', 'note'],
   },
 };
 
@@ -712,7 +717,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'airport codes (e.g. SFO, JFK, DPS, LHR, CDG) or plain city/region names — resolve any code to its ' +
           'city and airport. If only a city or region is given for the destination, pick the most sensible main ' +
           'international airport. Return a realistic round-trip economy fare in USD based on typical pricing and ' +
-          'the route distance, and always caveat that it is a rough, non-live estimate — not real-time pricing.',
+          'the route distance, plus an approximate one-way travel time (flightTime) that accounts for typical ' +
+          'layovers when no common nonstop exists, and always caveat that it is a rough, non-live estimate — not real-time pricing.',
         userText,
         FLIGHT_ESTIMATE_TOOL,
         1024

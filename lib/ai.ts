@@ -33,6 +33,8 @@ export interface FlightEstimate {
   fromCity: string;
   toCity: string;
   estimatedRoundTripUsd: number;
+  flightTime?: string;
+  nonstop?: boolean;
   note: string;
 }
 

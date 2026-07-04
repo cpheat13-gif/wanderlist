@@ -72,6 +72,29 @@ export interface Poll {
   created_at: string;
 }
 
+// A single day in an option's snapshotted itinerary (public, denormalized).
+export interface PollOptionDay {
+  dayNumber: number;
+  title: string;
+  summary: string;
+  activities: { title: string; category: string; description: string }[];
+}
+
+// Public snapshot of a trip's detail so anonymous voters can dig in before voting.
+export interface PollOptionDetail {
+  destination: string | null;
+  estCostPerPerson: number | null;
+  travelers: number | null;
+  season: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  flightFrom: string | null;
+  flightTime: string | null;
+  flightCostUsd: number | null;
+  gallery: string[];
+  days: PollOptionDay[];
+}
+
 export interface PollOption {
   id: string;
   poll_id: string;
@@ -80,6 +103,7 @@ export interface PollOption {
   subtitle: string | null;
   cover_photo_url: string | null;
   display_order: number;
+  detail: PollOptionDetail | null;
   created_at: string;
 }
 

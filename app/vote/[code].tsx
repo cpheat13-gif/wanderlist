@@ -18,6 +18,7 @@ import { castVote, fetchPollByCode, fetchVotes, subscribeVotes } from '../../lib
 import { SERIF } from '../../lib/editorial';
 import { Poll, PollOption, PollVote } from '../../lib/types';
 import { PollResults } from '../../components/poll/PollResults';
+import { OptionDetailSheet } from '../../components/poll/OptionDetailSheet';
 
 export default function VoteScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -33,6 +34,7 @@ export default function VoteScreen() {
   const [error, setError] = useState<string | null>(null);
   const [voted, setVoted] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [detailOption, setDetailOption] = useState<PollOption | null>(null);
   const fade = useRef(new Animated.Value(0)).current;
   const unsubRef = useRef<(() => void) | undefined>(undefined);
 
@@ -236,6 +238,28 @@ export default function VoteScreen() {
                         {isSel ? <Text style={{ color: 'white', fontSize: 13, fontWeight: 'bold' }}>✓</Text> : null}
                       </View>
                     </View>
+
+                    {o.detail ? (
+                      <Pressable
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          setDetailOption(o);
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingVertical: 12,
+                          backgroundColor: pressed ? '#FAFAF8' : 'white',
+                          borderTopWidth: 1,
+                          borderTopColor: '#F0F0EE',
+                        })}
+                      >
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700' }}>
+                          View cost, flights &amp; itinerary ›
+                        </Text>
+                      </Pressable>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -320,6 +344,8 @@ export default function VoteScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <OptionDetailSheet option={detailOption} onClose={() => setDetailOption(null)} />
     </SafeAreaView>
   );
 }

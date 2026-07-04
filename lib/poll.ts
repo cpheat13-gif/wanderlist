@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Poll, PollOption, PollVote } from './types';
+import { Poll, PollOption, PollOptionDetail, PollVote } from './types';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -25,6 +25,7 @@ export interface NewPollOption {
   label: string;
   subtitle?: string | null;
   cover_photo_url?: string | null;
+  detail?: PollOptionDetail | null;
 }
 
 export interface CreatePollResult {
@@ -77,6 +78,7 @@ export async function createPoll(
     label: o.label,
     subtitle: o.subtitle ?? null,
     cover_photo_url: o.cover_photo_url ?? null,
+    detail: o.detail ?? null,
     display_order: i,
   }));
   const { error: optErr } = await supabase.from('poll_options').insert(rows);
