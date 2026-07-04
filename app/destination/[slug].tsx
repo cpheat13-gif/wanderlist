@@ -556,33 +556,49 @@ export default function DestinationDetailScreen() {
           backgroundColor: '#FDFCFA',
           borderTopWidth: 1,
           borderTopColor: '#F0F0EE',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 16,
         }}
       >
-        <View>
-          <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginRight: 8 }}>
             Est. daily
           </Text>
-          <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 20 }}>
+          <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 18 }}>
             {formatPrice(estDailyCost)}
             <Text style={{ fontSize: 12, color: '#9CA3AF' }}> / person</Text>
           </Text>
         </View>
-        <Pressable
-          onPress={handlePlan}
-          style={({ pressed }) => ({
-            flex: 1,
-            backgroundColor: '#111',
-            borderRadius: 100,
-            paddingVertical: 16,
-            alignItems: 'center',
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-          })}
-        >
-          <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Plan trip itinerary</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Pressable
+            onPress={toggleWishlist}
+            style={({ pressed }) => ({
+              flex: 1,
+              backgroundColor: savedTripId ? '#FCECEF' : 'white',
+              borderWidth: 1,
+              borderColor: savedTripId ? '#F5C6CF' : '#E5E7EB',
+              borderRadius: 100,
+              paddingVertical: 15,
+              alignItems: 'center',
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
+          >
+            <Text style={{ color: savedTripId ? '#E11D48' : '#111', fontSize: 14.5, fontWeight: '700' }}>
+              {savedTripId ? '♥  Wishlisted' : '♡  Add to wishlist'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handlePlan}
+            style={({ pressed }) => ({
+              flex: 1,
+              backgroundColor: '#111',
+              borderRadius: 100,
+              paddingVertical: 15,
+              alignItems: 'center',
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
+          >
+            <Text style={{ color: 'white', fontSize: 14.5, fontWeight: '700' }}>Start planning</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
