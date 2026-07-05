@@ -70,6 +70,7 @@ export default function ProfileScreen() {
 
         {/* Hub */}
         <View style={{ gap: 12 }}>
+          <HubRow icon="🌍" title="Your travel map" subtitle="Everywhere you've been & are going" onPress={() => router.push('/world')} />
           <HubRow icon="🗳️" title="Polls" subtitle="Vote on where to go next" onPress={() => router.push('/(tabs)/polls')} />
           <HubRow icon="👣" title="Past trips" subtitle="The places you've already been" onPress={() => router.push('/(tabs)/past')} />
           <HubRow icon="✧" title="Friends" subtitle="See your club's dreams & trips" onPress={() => router.push('/friends')} />
