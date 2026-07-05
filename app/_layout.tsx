@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { PendingApproval } from '../components/PendingApproval';
+import { LightboxProvider } from '../components/Lightbox';
 
 const headerOptions = {
   headerStyle: { backgroundColor: '#0B0B0E' },
@@ -83,8 +84,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
+          <LightboxProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </LightboxProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

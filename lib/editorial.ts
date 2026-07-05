@@ -3,6 +3,24 @@ import { Platform } from 'react-native';
 // Editorial serif for magazine-style display type.
 export const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 
+// Soft, consistent card shadow for depth across the app.
+export const CARD_SHADOW = {
+  shadowColor: '#1A1A2E',
+  shadowOpacity: 0.06,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 8 },
+  elevation: 2,
+} as const;
+
+// A tighter shadow for photo tiles.
+export const PHOTO_SHADOW = {
+  shadowColor: '#1A1A2E',
+  shadowOpacity: 0.12,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 5 },
+  elevation: 3,
+} as const;
+
 export interface Review {
   name: string;
   date: string;

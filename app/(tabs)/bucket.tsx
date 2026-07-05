@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { DESTINATIONS, SERIF } from '../../lib/editorial';
+import { DESTINATIONS, PHOTO_SHADOW, SERIF } from '../../lib/editorial';
 import { Trip } from '../../lib/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -211,6 +211,7 @@ export default function WishlistScreen() {
                   borderRadius: 20,
                   overflow: 'hidden',
                   backgroundColor: '#E9EAEC',
+                  ...PHOTO_SHADOW,
                   transform: [{ scale: pressed ? 0.97 : 1 }],
                 })}
               >

@@ -20,6 +20,7 @@ import { fetchDestinationPhoto, fetchDestinationPhotos } from '../../lib/unsplas
 import { DestinationDossier, fetchDestinationDossier } from '../../lib/ai';
 import { Highlight, SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 import { ConciergeLoader } from '../../components/ConciergeLoader';
+import { useLightbox } from '../../components/Lightbox';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GALLERY_H = Math.round(SCREEN_HEIGHT * 0.52);
@@ -33,6 +34,7 @@ export default function DestinationDetailScreen() {
   const params = useLocalSearchParams<{ slug: string; name?: string; country?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { open: openLightbox } = useLightbox();
   const { session } = useAuth();
 
   const dest = useMemo(() => destinationBySlug(params.slug ?? ''), [params.slug]);
@@ -205,7 +207,11 @@ export default function DestinationDetailScreen() {
             onMomentumScrollEnd={onGalleryScroll}
           >
             {gallery.map((url, i) => (
-              <View key={i} style={{ width: SCREEN_WIDTH, height: GALLERY_H }}>
+              <Pressable
+                key={i}
+                onPress={() => url && openLightbox(gallery.filter((u): u is string => !!u), gallery.filter((u): u is string => !!u).indexOf(url))}
+                style={{ width: SCREEN_WIDTH, height: GALLERY_H }}
+              >
                 {url ? (
                   <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
                 ) : (
@@ -213,7 +219,7 @@ export default function DestinationDetailScreen() {
                     <ActivityIndicator color="rgba(255,255,255,0.4)" />
                   </View>
                 )}
-              </View>
+              </Pressable>
             ))}
           </ScrollView>
 

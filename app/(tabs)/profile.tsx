@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../lib/auth';
-import { SERIF } from '../../lib/editorial';
+import { CARD_SHADOW, SERIF } from '../../lib/editorial';
 
 function HubRow({
   icon,
@@ -27,6 +27,7 @@ function HubRow({
         borderRadius: 18,
         paddingVertical: 16,
         paddingHorizontal: 16,
+        ...CARD_SHADOW,
         transform: [{ scale: pressed ? 0.99 : 1 }],
       })}
     >

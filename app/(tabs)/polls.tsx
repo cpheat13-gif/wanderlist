@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../lib/auth';
 import { fetchMyPolls, MyPollSummary } from '../../lib/poll';
-import { SERIF } from '../../lib/editorial';
+import { CARD_SHADOW, SERIF } from '../../lib/editorial';
 
 export default function PollsScreen() {
   const router = useRouter();
@@ -79,6 +79,7 @@ export default function PollsScreen() {
                 borderColor: '#F0F0EE',
                 borderRadius: 18,
                 padding: 18,
+                ...CARD_SHADOW,
                 transform: [{ scale: pressed ? 0.98 : 1 }],
               })}
             >

@@ -7,7 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { addMemory, deleteMemory, memoryUrl, pickImageWeb, toggleFavourite, updateTripRecap } from '../../lib/memories';
-import { SERIF } from '../../lib/editorial';
+import { CARD_SHADOW, PHOTO_SHADOW, SERIF } from '../../lib/editorial';
+import { useLightbox } from '../../components/Lightbox';
 import { Memory, Trip } from '../../lib/types';
 
 const { width: SCREEN_WIDTH } = require('react-native').Dimensions.get('window');
@@ -35,6 +36,7 @@ export default function MemoriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const { open: openLightbox } = useLightbox();
   const myId = session?.user.id ?? '';
 
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -93,6 +95,8 @@ export default function MemoriesScreen() {
   const favourites = memories.filter((m) => m.is_favourite);
   const shown = favourites.length > 0 ? favourites : memories.slice(0, 6);
   const heroUrl = trip?.cover_photo_url || (memories[0] ? memoryUrl(memories[0].photo_path) : null);
+  const allUrls = memories.map((m) => memoryUrl(m.photo_path));
+  const idxOf = (m: Memory) => memories.findIndex((x) => x.id === m.id);
 
   async function onPickAdd() {
     setError(null);
@@ -166,8 +170,10 @@ export default function MemoriesScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: canAdd ? 120 : 48 }} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={{ height: 300, backgroundColor: '#E9EAEC' }}>
-          {heroUrl ? <Image source={{ uri: heroUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : null}
-          <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.55)']} locations={[0, 0.5, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+          <Pressable onPress={() => heroUrl && openLightbox(heroUrl)} style={{ width: '100%', height: '100%' }}>
+            {heroUrl ? <Image source={{ uri: heroUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : null}
+          </Pressable>
+          <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.55)']} locations={[0, 0.5, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
           <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} style={{ position: 'absolute', top: insets.top + 8, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 20, color: '#111' }}>‹</Text>
           </Pressable>
@@ -225,12 +231,12 @@ export default function MemoriesScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 8 }}>
                 {shown.map((m) => (
                   <View key={m.id} style={{ width: 220 }}>
-                    <View style={{ width: 220, height: 160, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E9EAEC' }}>
+                    <Pressable onPress={() => openLightbox(allUrls, idxOf(m))} style={{ width: 220, height: 160, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E9EAEC', ...PHOTO_SHADOW }}>
                       <Image source={{ uri: memoryUrl(m.photo_path) }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       <Pressable onPress={() => onFav(m)} style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 14, color: m.is_favourite ? '#2563EB' : '#9CA3AF' }}>{m.is_favourite ? '♥' : '♡'}</Text>
                       </Pressable>
-                    </View>
+                    </Pressable>
                     {m.caption ? <Text style={{ fontFamily: SERIF, fontSize: 15, color: '#111', marginTop: 8 }} numberOfLines={1}>{m.caption}</Text> : null}
                     {m.note ? <Text style={{ color: '#9CA3AF', fontSize: 12.5, marginTop: 2 }} numberOfLines={1}>{m.note}</Text> : null}
                   </View>
@@ -253,7 +259,7 @@ export default function MemoriesScreen() {
               <Text style={{ fontFamily: SERIF, fontSize: 21, color: '#111', marginTop: 30, marginBottom: 14 }}>All {memories.length}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                 {memories.map((m) => (
-                  <Pressable key={m.id} onLongPress={() => (m.created_by === myId || isOwner) && onDelete(m)} style={{ width: CARD_W, height: 150, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E9EAEC' }}>
+                  <Pressable key={m.id} onPress={() => openLightbox(allUrls, idxOf(m))} onLongPress={() => (m.created_by === myId || isOwner) && onDelete(m)} style={{ width: CARD_W, height: 150, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E9EAEC', ...PHOTO_SHADOW }}>
                     <Image source={{ uri: memoryUrl(m.photo_path) }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     <Pressable onPress={() => onFav(m)} style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 12, color: m.is_favourite ? '#2563EB' : '#9CA3AF' }}>{m.is_favourite ? '♥' : '♡'}</Text>
@@ -326,7 +332,7 @@ export default function MemoriesScreen() {
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE', borderRadius: 16, paddingVertical: 14, alignItems: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE', borderRadius: 16, paddingVertical: 14, alignItems: 'center', ...CARD_SHADOW }}>
       <Text style={{ fontFamily: SERIF, fontSize: 22, color: '#111' }}>{value}</Text>
       <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 2 }}>{label}</Text>
     </View>
