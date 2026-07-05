@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { fetchDestinationPhoto } from '../../lib/unsplash';
-import { buildItinerary, refineItinerary, FlightEstimate, ItineraryDay } from '../../lib/ai';
+import { buildItinerary, refineItinerary, buildDay, DayBuild, FlightEstimate, ItineraryDay } from '../../lib/ai';
 import { SERIF, destinationBySlug, formatPrice } from '../../lib/editorial';
 import { colorForCategory } from '../../theme/colors';
 import { ConciergeLoader } from '../../components/ConciergeLoader';
@@ -30,7 +30,7 @@ import { ItineraryDayRow } from '../../lib/types';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COVER_H = Math.round(SCREEN_HEIGHT * 0.24);
 
-type Phase = 'days' | 'season' | 'travelers' | 'origin' | 'fork' | 'generating' | 'builder';
+type Phase = 'days' | 'season' | 'travelers' | 'origin' | 'fork' | 'generating' | 'together' | 'builder';
 
 const WIZARD_STEPS: Phase[] = ['days', 'season', 'travelers', 'origin'];
 const DAY_CHIPS = [3, 5, 7, 10];
@@ -117,6 +117,13 @@ export default function PlanTripScreen() {
   const autoSaveRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const sheetScrollRef = useRef<ScrollView>(null);
+
+  // Day-by-day "build together" state
+  const [togetherDays, setTogetherDays] = useState<ItineraryDay[]>([]);
+  const [dayRequest, setDayRequest] = useState('');
+  const [dayDraft, setDayDraft] = useState<DayBuild | null>(null);
+  const [dayBuilding, setDayBuilding] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
 
   function showToast(message: string) {
@@ -231,6 +238,12 @@ export default function PlanTripScreen() {
       setPhase('origin');
       return;
     }
+    if (phase === 'together') {
+      // Back out of the day-by-day flow to the fork (drop any in-progress days).
+      setDayDraft(null);
+      setPhase('fork');
+      return;
+    }
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)');
   }
@@ -262,6 +275,65 @@ export default function PlanTripScreen() {
     } catch (err) {
       setGenError(err instanceof Error ? err.message : 'Something went wrong building the itinerary.');
       setPhase('fork');
+    }
+  }
+
+  // ── Build together, day by day ──
+  function startTogether() {
+    setTogetherDays([]);
+    setDayRequest('');
+    setDayDraft(null);
+    setDayError(null);
+    setGenError(null);
+    setPhase('together');
+  }
+
+  async function buildThisDay() {
+    if (dayBuilding) return;
+    const dayNumber = togetherDays.length + 1;
+    setDayBuilding(true);
+    setDayError(null);
+    try {
+      const res = await buildDay({
+        destination: destName,
+        country: destCountry,
+        dayNumber,
+        totalDays: days,
+        season: season ?? undefined,
+        travelers,
+        request: dayRequest,
+        priorDays: togetherDays.map((d) => ({ day: d.day, title: d.title, summary: d.summary })),
+      });
+      setDayDraft(res);
+    } catch (err) {
+      setDayError(err instanceof Error ? err.message : 'The concierge couldn’t plan that day — try again.');
+    } finally {
+      setDayBuilding(false);
+    }
+  }
+
+  function acceptDay() {
+    if (!dayDraft) return;
+    const dayNumber = togetherDays.length + 1;
+    const built: ItineraryDay = {
+      day: dayNumber,
+      title: dayDraft.title,
+      summary: dayDraft.summary,
+      estCostPerPersonUsd: typeof dayDraft.estCostPerPersonUsd === 'number' ? dayDraft.estCostPerPersonUsd : 0,
+      items: dayDraft.items ?? [],
+    };
+    const next = [...togetherDays, built];
+    setDayDraft(null);
+    setDayRequest('');
+    if (dayNumber >= days) {
+      // All days planned — hand off to the builder to review + save.
+      setTogetherDays([]);
+      setItinerary(next);
+      setSaved(false);
+      autoSaveRef.current = false;
+      setPhase('builder');
+    } else {
+      setTogetherDays(next);
     }
   }
 
@@ -821,10 +893,7 @@ export default function PlanTripScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => {
-                autoSaveRef.current = false;
-                generate();
-              }}
+              onPress={startTogether}
               style={({ pressed }) => ({
                 backgroundColor: 'white',
                 borderWidth: 1.5,
@@ -836,10 +905,10 @@ export default function PlanTripScreen() {
             >
               <Text style={{ fontSize: 22, marginBottom: 8 }}>✎</Text>
               <Text style={{ fontFamily: SERIF, color: '#111', fontSize: 19, marginBottom: 5 }}>
-                Build it together
+                Build it together, day by day
               </Text>
               <Text style={{ color: '#6B7280', fontSize: 13, lineHeight: 19 }}>
-                We start with a draft, then shape it day by day — tell us what you love, ask questions, and we'll recommend the best of {destName}.
+                You tell us what you feel like each day — broad or specific — and we plan it with you, one day at a time, flagging anything that won’t quite work.
               </Text>
             </Pressable>
           </View>
@@ -848,6 +917,127 @@ export default function PlanTripScreen() {
         {phase === 'generating' ? (
           <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 }}>
             <ConciergeLoader caption={`Drafting your ${days} days in ${destName}…`} size={72} />
+          </View>
+        ) : null}
+
+        {phase === 'together' ? (
+          <View style={{ paddingHorizontal: 24, paddingTop: 22, paddingBottom: 40 }}>
+            <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+              Building together
+            </Text>
+            <Text style={{ fontFamily: SERIF, fontSize: 26, color: '#111' }}>
+              Day {togetherDays.length + 1} of {days}
+            </Text>
+            <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginTop: 4, marginBottom: 18 }}>
+              You steer {destName}; the concierge plans it with you.
+            </Text>
+
+            {/* Days already planned */}
+            {togetherDays.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {togetherDays.map((d) => (
+                  <View key={d.day} style={{ backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 100, paddingVertical: 6, paddingHorizontal: 12 }}>
+                    <Text style={{ color: '#047857', fontSize: 12, fontWeight: '700' }}>✓ Day {d.day} · {d.title}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {dayBuilding ? (
+              <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                <ConciergeLoader caption={`Planning day ${togetherDays.length + 1}…`} />
+              </View>
+            ) : dayDraft ? (
+              <View>
+                {dayDraft.insight && dayDraft.insight.trim() ? (
+                  <View style={{ flexDirection: 'row', backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+                    <Text style={{ fontSize: 15, marginRight: 8 }}>💡</Text>
+                    <Text style={{ flex: 1, color: '#92400E', fontSize: 13, lineHeight: 19 }}>{dayDraft.insight.trim()}</Text>
+                  </View>
+                ) : null}
+
+                <View style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE', borderRadius: 18, padding: 18 }}>
+                  <Text style={{ fontFamily: SERIF, fontSize: 20, color: '#111' }}>{dayDraft.title}</Text>
+                  {dayDraft.summary ? (
+                    <Text style={{ color: '#6B7280', fontSize: 13.5, lineHeight: 20, marginTop: 6 }}>{dayDraft.summary}</Text>
+                  ) : null}
+                  <View style={{ gap: 10, marginTop: 14 }}>
+                    {(dayDraft.items ?? []).map((it, i) => (
+                      <View key={i} style={{ flexDirection: 'row' }}>
+                        <Text style={{ color: '#C4C0B8', fontSize: 13, marginRight: 8 }}>{i + 1}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontFamily: SERIF, fontSize: 15, color: '#111' }}>{it.title}</Text>
+                          {it.description ? (
+                            <Text style={{ color: '#9CA3AF', fontSize: 12.5, lineHeight: 18, marginTop: 2 }}>{it.description}</Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+                  <Pressable
+                    onPress={() => setDayDraft(null)}
+                    style={({ pressed }) => ({ flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 100, paddingVertical: 15, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
+                  >
+                    <Text style={{ color: '#111', fontSize: 14, fontWeight: '700' }}>Change it</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={acceptDay}
+                    style={({ pressed }) => ({ flex: 1.4, backgroundColor: '#111', borderRadius: 100, paddingVertical: 15, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
+                  >
+                    <Text style={{ color: 'white', fontSize: 14, fontWeight: '700' }}>
+                      {togetherDays.length + 1 >= days ? 'Add & finish ›' : `Add day ${togetherDays.length + 1} ›`}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View>
+                <Text style={{ color: '#111', fontSize: 14.5, fontWeight: '600', marginBottom: 10 }}>
+                  What do you feel like on day {togetherDays.length + 1}?
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {['Surprise me', 'Relaxed & slow', 'Big sightseeing', 'Food & markets', 'Nature & outdoors', 'Culture & history'].map((v) => {
+                    const on = dayRequest.trim() === v;
+                    return (
+                      <Pressable
+                        key={v}
+                        onPress={() => setDayRequest(v)}
+                        style={({ pressed }) => ({
+                          backgroundColor: on ? '#111' : 'white',
+                          borderWidth: 1,
+                          borderColor: on ? '#111' : '#E5E7EB',
+                          borderRadius: 100,
+                          paddingVertical: 8,
+                          paddingHorizontal: 14,
+                          transform: [{ scale: pressed ? 0.97 : 1 }],
+                        })}
+                      >
+                        <Text style={{ color: on ? 'white' : '#111', fontSize: 12.5, fontWeight: '600' }}>{v}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <TextInput
+                  style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, color: '#111', fontSize: 15, minHeight: 84, textAlignVertical: 'top' }}
+                  placeholder="Broad or specific — e.g. slow morning, then the old town, and a great dinner near the water."
+                  placeholderTextColor="#B6BAC2"
+                  value={dayRequest}
+                  onChangeText={setDayRequest}
+                  multiline
+                />
+                {dayError ? <Text style={{ color: '#B91C1C', fontSize: 12.5, marginTop: 10 }}>{dayError}</Text> : null}
+                <Pressable
+                  onPress={buildThisDay}
+                  disabled={dayBuilding}
+                  style={({ pressed }) => ({ marginTop: 14, backgroundColor: '#111', borderRadius: 100, paddingVertical: 16, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
+                >
+                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Plan day {togetherDays.length + 1} ›</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         ) : null}
 
@@ -898,7 +1088,8 @@ export default function PlanTripScreen() {
         ) : null}
       </ScrollView>
 
-      {/* ── Persistent estimate bar + actions ── */}
+      {/* ── Persistent estimate bar + actions (hidden in the day-by-day flow, which has its own buttons) ── */}
+      {phase !== 'together' ? (
       <View
         style={{
           position: 'absolute',
@@ -1018,6 +1209,7 @@ export default function PlanTripScreen() {
           ) : null}
         </View>
       </View>
+      ) : null}
 
       {/* ── "Updated" toast ── */}
       {toast ? (

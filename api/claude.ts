@@ -179,6 +179,38 @@ const LOCATE_STOPS_TOOL = {
   },
 };
 
+const BUILD_DAY_TOOL = {
+  name: 'build_day',
+  description: 'Plan a single, well-sequenced day of a trip from the traveler’s request.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Short, evocative title for the day.' },
+      summary: { type: 'string', description: 'One-line summary of the day’s arc.' },
+      estCostPerPersonUsd: { type: 'number', description: 'Rough per-person cost for the day in USD.' },
+      items: {
+        type: 'array',
+        description: '2–4 stops in visiting order.',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            category: { type: 'string', enum: ['hotel', 'restaurant', 'activity', 'sightseeing'] },
+            description: { type: 'string', description: 'One crisp sentence.' },
+          },
+          required: ['title', 'category', 'description'],
+        },
+      },
+      insight: {
+        type: 'string',
+        description:
+          'A friendly note if the request had a tradeoff, feasibility issue, or a better idea (one or two sentences). Empty string if the plan is straightforwardly good.',
+      },
+    },
+    required: ['title', 'summary', 'items', 'insight'],
+  },
+};
+
 const SLOT_STOP_TOOL = {
   name: 'slot_stop',
   description: 'Turn a place the traveler wants to add into a well-formed stop, slotted into the right time of day.',
@@ -750,6 +782,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (mode === 'buildday') {
+      const { destination, country, dayNumber, totalDays, season, travelers, request, priorDays } = req.body;
+      if (!destination || typeof destination !== 'string') {
+        res.status(400).json({ error: 'destination is required' });
+        return;
+      }
+      const prior = Array.isArray(priorDays)
+        ? priorDays
+            .filter((d: unknown): d is { day: number; title: string; summary?: string } => !!d && typeof (d as { title?: unknown }).title === 'string')
+            .map((d) => `- Day ${d.day}: ${d.title}${d.summary ? ' — ' + d.summary : ''}`)
+            .join('\n')
+        : '';
+      const userText = [
+        `Destination: ${destination}${country ? `, ${country}` : ''}`,
+        `Planning day ${dayNumber || 1} of ${totalDays || dayNumber || 1}.`,
+        season ? `Season: ${season}.` : null,
+        travelers ? `Travelers: ${travelers}.` : null,
+        prior ? `Already planned on earlier days (do not repeat these places):\n${prior}` : 'No earlier days planned yet.',
+        `What the traveler wants for this day: ${request && typeof request === 'string' && request.trim() ? request.trim() : 'Surprise me — plan a great day here.'}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await callClaude(
+        'You are a warm, expert travel concierge planning ONE day of a trip, collaboratively. The traveler tells ' +
+          'you what they want for this day — it may be broad ("a relaxed beach day") or specific ("Senso-ji then ' +
+          'ramen in Shibuya"). Build a realistic, well-sequenced single day of 2–4 stops in the destination that ' +
+          'honors their request. Never repeat places already used on earlier days. If their idea has a problem — ' +
+          'too much for one day, stops far apart, wrong order, seasonal/closed, or better saved for another day — ' +
+          'still build the best possible version AND explain the tradeoff or a smarter alternative in "insight" ' +
+          '(one or two friendly sentences). If the plan is straightforwardly good, leave "insight" empty. Keep each ' +
+          'description to one crisp sentence.',
+        userText,
+        BUILD_DAY_TOOL,
+        1500
+      );
+      res.status(200).json(result);
+      return;
+    }
+
     if (mode === 'locate') {
       const { destination, country, stops } = req.body;
       if (!destination || typeof destination !== 'string') {
@@ -898,7 +970,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'locate', 'dayplan', 'swap', 'slot', 'airports', 'explore', 'ask', or 'plan'" });
+    res.status(400).json({ error: "mode must be 'destination', 'itinerary', 'refine', 'highlights', 'flight', 'buildday', 'locate', 'dayplan', 'swap', 'slot', 'airports', 'explore', 'ask', or 'plan'" });
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Unknown error calling Claude' });
   }

@@ -126,6 +126,29 @@ export function estimateFlight(params: {
   return postClaude<FlightEstimate>({ mode: 'flight', ...params });
 }
 
+export interface DayBuild {
+  title: string;
+  summary: string;
+  estCostPerPersonUsd?: number;
+  items: ItineraryItem[];
+  insight: string;
+}
+
+// Plan a single day collaboratively from the traveler's request (broad or
+// specific). Returns the day plus a concierge "insight" note on any tradeoff.
+export function buildDay(params: {
+  destination: string;
+  country?: string;
+  dayNumber: number;
+  totalDays: number;
+  season?: string;
+  travelers?: number;
+  request: string;
+  priorDays?: { day: number; title: string; summary: string }[];
+}): Promise<DayBuild> {
+  return postClaude<DayBuild>({ mode: 'buildday', ...params });
+}
+
 export interface LocatedStop {
   ref: string;
   lat: number;
