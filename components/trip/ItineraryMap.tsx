@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { MapStop } from '../../lib/types';
 
 // Native map (react-native-maps). The web build uses ItineraryMap.web.tsx instead.
-export function ItineraryMap({ stops }: { stops: MapStop[] }) {
+export function ItineraryMap({ stops, onSelectDay }: { stops: MapStop[]; onSelectDay?: (day: number) => void }) {
   if (stops.length === 0) return <View style={{ flex: 1 }} />;
 
   const lats = stops.map((s) => s.lat);
@@ -28,6 +28,7 @@ export function ItineraryMap({ stops }: { stops: MapStop[] }) {
           title={s.title}
           description={`Day ${s.dayNumber}`}
           pinColor={s.color}
+          onPress={() => onSelectDay?.(s.dayNumber)}
         />
       ))}
     </MapView>

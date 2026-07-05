@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { locateStops } from '../../lib/ai';
 import { SERIF } from '../../lib/editorial';
@@ -13,10 +15,13 @@ const colorForDay = (n: number) => DAY_COLORS[(n - 1 + DAY_COLORS.length) % DAY_
 type RawStop = { ref: string; title: string; dayNumber: number; lat?: number; lng?: number };
 
 export function MapTab({ tripId, destination, country }: { tripId: string; destination: string; country?: string }) {
+  const router = useRouter();
+  const [rows, setRows] = useState<ItineraryDayRow[]>([]);
   const [stops, setStops] = useState<MapStop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dayFilter, setDayFilter] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,10 +32,11 @@ export function MapTab({ tripId, destination, country }: { tripId: string; desti
         .select('*')
         .eq('trip_id', tripId)
         .order('day_number', { ascending: true });
-      const rows = (data ?? []) as ItineraryDayRow[];
+      const dayRows = (data ?? []) as ItineraryDayRow[];
+      setRows(dayRows);
 
       const raw: RawStop[] = [];
-      rows.forEach((d) =>
+      dayRows.forEach((d) =>
         (d.activities ?? []).forEach((a, i) =>
           raw.push({ ref: `${d.day_number}-${i}`, title: a.title, dayNumber: d.day_number, lat: a.lat, lng: a.lng })
         )
@@ -53,7 +59,7 @@ export function MapTab({ tripId, destination, country }: { tripId: string; desti
         });
         // Persist coords back onto the itinerary so we don't re-locate every visit
         // (best-effort — silently no-ops for non-owners under RLS).
-        await persist(rows, coords);
+        await persist(dayRows, coords);
       }
 
       const built: MapStop[] = raw
@@ -150,9 +156,86 @@ export function MapTab({ tripId, destination, country }: { tripId: string; desti
 
       {/* Map fills the rest; leave room for the floating tab bar */}
       <View style={{ flex: 1, marginHorizontal: 12, marginBottom: 96, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E9EAEC' }}>
-        <ItineraryMap key={dayFilter ?? 'all'} stops={visible} />
+        <ItineraryMap key={dayFilter ?? 'all'} stops={visible} onSelectDay={setSelectedDay} />
       </View>
+
+      <DaySheet
+        row={rows.find((r) => r.day_number === selectedDay) ?? null}
+        color={selectedDay ? colorForDay(selectedDay) : '#111'}
+        onClose={() => setSelectedDay(null)}
+        onOpen={(id) => {
+          setSelectedDay(null);
+          router.push(`/day/${id}`);
+        }}
+      />
     </View>
+  );
+}
+
+function DaySheet({
+  row,
+  color,
+  onClose,
+  onOpen,
+}: {
+  row: ItineraryDayRow | null;
+  color: string;
+  onClose: () => void;
+  onOpen: (dayId: string) => void;
+}) {
+  return (
+    <Modal visible={!!row} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <SafeAreaView style={{ backgroundColor: '#FDFCFA', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '72%' }}>
+          <View style={{ alignItems: 'center', paddingTop: 10 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E0' }} />
+          </View>
+          {row ? (
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{row.day_number}</Text>
+                </View>
+                <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  Day {row.day_number}
+                </Text>
+              </View>
+              <Text style={{ fontFamily: SERIF, fontSize: 23, color: '#111', marginBottom: row.summary ? 6 : 14 }}>{row.title}</Text>
+              {row.summary ? (
+                <Text style={{ color: '#6B7280', fontSize: 13.5, lineHeight: 20, marginBottom: 16 }}>{row.summary}</Text>
+              ) : null}
+
+              <View style={{ gap: 10 }}>
+                {(row.activities ?? []).map((a, i) => (
+                  <View key={i} style={{ flexDirection: 'row', backgroundColor: 'white', borderWidth: 1, borderColor: '#F0F0EE', borderRadius: 14, padding: 14 }}>
+                    <Text style={{ color: '#C4C0B8', fontSize: 13, marginRight: 10 }}>{i + 1}</Text>
+                    <View style={{ flex: 1 }}>
+                      {a.timeOfDay ? (
+                        <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>
+                          {a.timeOfDay}
+                        </Text>
+                      ) : null}
+                      <Text style={{ fontFamily: SERIF, fontSize: 15.5, color: '#111' }}>{a.title}</Text>
+                      {a.description ? (
+                        <Text style={{ color: '#9CA3AF', fontSize: 12.5, lineHeight: 18, marginTop: 3 }}>{a.description}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <Pressable
+                onPress={() => onOpen(row.id)}
+                style={({ pressed }) => ({ marginTop: 18, backgroundColor: '#111', borderRadius: 100, paddingVertical: 15, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
+              >
+                <Text style={{ color: 'white', fontSize: 14.5, fontWeight: '700' }}>Open this day ›</Text>
+              </Pressable>
+            </ScrollView>
+          ) : null}
+        </SafeAreaView>
+      </View>
+    </Modal>
   );
 }
 

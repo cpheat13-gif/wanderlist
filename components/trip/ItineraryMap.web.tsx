@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MapStop } from '../../lib/types';
 
 // Self-contained Leaflet + OpenStreetMap map in an iframe. Leaflet and OSM tiles
 // load from CDN at runtime (no bundler/CSS config, no API key). Markers are
-// numbered + colored by day; tapping one shows the stop name.
+// numbered + colored by day; tapping one posts its day number to the parent.
 function buildHtml(stops: MapStop[]): string {
   const data = JSON.stringify(stops).replace(/</g, '\\u003c');
   return `<!doctype html><html><head>
@@ -18,10 +18,10 @@ var map = L.map('map', { zoomControl: true });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
 var pts = [];
 stops.forEach(function(s){
-  var icon = L.divIcon({ className:'', iconSize:[24,24], iconAnchor:[12,12],
-    html:'<div style="width:24px;height:24px;border-radius:50%;background:'+s.color+';border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px system-ui,-apple-system,sans-serif">'+s.dayNumber+'</div>' });
-  var m = L.marker([s.lat, s.lng], { icon: icon }).addTo(map);
-  m.bindPopup('<div style="font:600 13px system-ui,-apple-system,sans-serif"><span style="color:#9CA3AF">Day '+s.dayNumber+'</span><br>'+String(s.title).replace(/</g,'&lt;')+'</div>');
+  var icon = L.divIcon({ className:'', iconSize:[26,26], iconAnchor:[13,13],
+    html:'<div style="width:26px;height:26px;border-radius:50%;background:'+s.color+';border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px system-ui,-apple-system,sans-serif;cursor:pointer">'+s.dayNumber+'</div>' });
+  var m = L.marker([s.lat, s.lng], { icon: icon, title: s.title }).addTo(map);
+  m.on('click', function(){ try { parent.postMessage({ type:'gc-day', day: s.dayNumber }, '*'); } catch(e){} });
   pts.push([s.lat, s.lng]);
 });
 if (pts.length > 1) { map.fitBounds(pts, { padding:[44,44] }); }
@@ -30,7 +30,19 @@ else { map.setView([20, 0], 2); }
 </script></body></html>`;
 }
 
-export function ItineraryMap({ stops }: { stops: MapStop[] }) {
+export function ItineraryMap({ stops, onSelectDay }: { stops: MapStop[]; onSelectDay?: (day: number) => void }) {
+  const cbRef = useRef(onSelectDay);
+  cbRef.current = onSelectDay;
+
+  useEffect(() => {
+    function handler(e: MessageEvent) {
+      const d = e?.data as { type?: string; day?: number } | undefined;
+      if (d && d.type === 'gc-day' && typeof d.day === 'number') cbRef.current?.(d.day);
+    }
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   return React.createElement('iframe', {
     srcDoc: buildHtml(stops),
     title: 'Itinerary map',
