@@ -124,6 +124,8 @@ export default function PlanTripScreen() {
   const [dayDraft, setDayDraft] = useState<DayBuild | null>(null);
   const [dayBuilding, setDayBuilding] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
+  // When set, we're re-doing an already-added day rather than building the next one.
+  const [editingDay, setEditingDay] = useState<number | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
 
   function showToast(message: string) {
@@ -279,30 +281,49 @@ export default function PlanTripScreen() {
   }
 
   // ── Build together, day by day ──
+  const targetDay = editingDay ?? togetherDays.length + 1;
+  const allDaysDone = editingDay === null && togetherDays.length >= days;
+
   function startTogether() {
     setTogetherDays([]);
     setDayRequest('');
     setDayDraft(null);
     setDayError(null);
+    setEditingDay(null);
     setGenError(null);
     setPhase('together');
   }
 
+  function editDay(n: number) {
+    setEditingDay(n);
+    setDayDraft(null);
+    setDayRequest('');
+    setDayError(null);
+  }
+
+  function cancelEdit() {
+    setEditingDay(null);
+    setDayDraft(null);
+    setDayRequest('');
+  }
+
   async function buildThisDay() {
     if (dayBuilding) return;
-    const dayNumber = togetherDays.length + 1;
     setDayBuilding(true);
     setDayError(null);
     try {
       const res = await buildDay({
         destination: destName,
         country: destCountry,
-        dayNumber,
+        dayNumber: targetDay,
         totalDays: days,
         season: season ?? undefined,
         travelers,
         request: dayRequest,
-        priorDays: togetherDays.map((d) => ({ day: d.day, title: d.title, summary: d.summary })),
+        // Every other planned day is context (so we don't repeat places).
+        priorDays: togetherDays
+          .filter((d) => d.day !== targetDay)
+          .map((d) => ({ day: d.day, title: d.title, summary: d.summary })),
       });
       setDayDraft(res);
     } catch (err) {
@@ -314,27 +335,28 @@ export default function PlanTripScreen() {
 
   function acceptDay() {
     if (!dayDraft) return;
-    const dayNumber = togetherDays.length + 1;
     const built: ItineraryDay = {
-      day: dayNumber,
+      day: targetDay,
       title: dayDraft.title,
       summary: dayDraft.summary,
       estCostPerPersonUsd: typeof dayDraft.estCostPerPersonUsd === 'number' ? dayDraft.estCostPerPersonUsd : 0,
       items: dayDraft.items ?? [],
     };
-    const next = [...togetherDays, built];
+    if (editingDay !== null) {
+      setTogetherDays((prev) => prev.map((d) => (d.day === editingDay ? built : d)));
+      setEditingDay(null);
+    } else {
+      setTogetherDays((prev) => [...prev, built]);
+    }
     setDayDraft(null);
     setDayRequest('');
-    if (dayNumber >= days) {
-      // All days planned — hand off to the builder to review + save.
-      setTogetherDays([]);
-      setItinerary(next);
-      setSaved(false);
-      autoSaveRef.current = false;
-      setPhase('builder');
-    } else {
-      setTogetherDays(next);
-    }
+  }
+
+  function reviewAndSave() {
+    setItinerary([...togetherDays].sort((a, b) => a.day - b.day));
+    setSaved(false);
+    autoSaveRef.current = false;
+    setPhase('builder');
   }
 
   async function persist(daysToSave: ItineraryDay[]) {
@@ -923,29 +945,48 @@ export default function PlanTripScreen() {
         {phase === 'together' ? (
           <View style={{ paddingHorizontal: 24, paddingTop: 22, paddingBottom: 40 }}>
             <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
-              Building together
+              {editingDay !== null ? `Re-doing day ${editingDay}` : allDaysDone ? 'All set' : 'Building together'}
             </Text>
             <Text style={{ fontFamily: SERIF, fontSize: 26, color: '#111' }}>
-              Day {togetherDays.length + 1} of {days}
+              {allDaysDone ? `Your ${days} days` : `Day ${targetDay} of ${days}`}
             </Text>
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#6B7280', fontSize: 13.5, marginTop: 4, marginBottom: 18 }}>
-              You steer {destName}; the concierge plans it with you.
+              {allDaysDone ? 'Tap any day to redo it, or save your trip.' : `You steer ${destName}; the concierge plans it with you.`}
             </Text>
 
-            {/* Days already planned */}
+            {/* Days already planned — tap to redo */}
             {togetherDays.length > 0 ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {togetherDays.map((d) => (
-                  <View key={d.day} style={{ backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 100, paddingVertical: 6, paddingHorizontal: 12 }}>
-                    <Text style={{ color: '#047857', fontSize: 12, fontWeight: '700' }}>✓ Day {d.day} · {d.title}</Text>
-                  </View>
-                ))}
+                {[...togetherDays]
+                  .sort((a, b) => a.day - b.day)
+                  .map((d) => {
+                    const on = editingDay === d.day;
+                    return (
+                      <Pressable
+                        key={d.day}
+                        onPress={() => editDay(d.day)}
+                        style={({ pressed }) => ({
+                          backgroundColor: on ? '#111' : '#F0FDF4',
+                          borderWidth: 1,
+                          borderColor: on ? '#111' : '#BBF7D0',
+                          borderRadius: 100,
+                          paddingVertical: 6,
+                          paddingHorizontal: 12,
+                          transform: [{ scale: pressed ? 0.97 : 1 }],
+                        })}
+                      >
+                        <Text style={{ color: on ? 'white' : '#047857', fontSize: 12, fontWeight: '700' }}>
+                          {on ? '✎' : '✓'} Day {d.day} · {d.title}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
               </View>
             ) : null}
 
             {dayBuilding ? (
               <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                <ConciergeLoader caption={`Planning day ${togetherDays.length + 1}…`} />
+                <ConciergeLoader caption={`Planning day ${targetDay}…`} />
               </View>
             ) : dayDraft ? (
               <View>
@@ -988,16 +1029,38 @@ export default function PlanTripScreen() {
                     style={({ pressed }) => ({ flex: 1.4, backgroundColor: '#111', borderRadius: 100, paddingVertical: 15, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
                   >
                     <Text style={{ color: 'white', fontSize: 14, fontWeight: '700' }}>
-                      {togetherDays.length + 1 >= days ? 'Add & finish ›' : `Add day ${togetherDays.length + 1} ›`}
+                      {editingDay !== null ? `Save day ${targetDay} ›` : `Add day ${targetDay} ›`}
                     </Text>
                   </Pressable>
                 </View>
               </View>
+            ) : allDaysDone ? (
+              <View>
+                <View style={{ backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                  <Text style={{ fontFamily: SERIF, fontSize: 16, color: '#047857' }}>✓ All {days} days planned</Text>
+                  <Text style={{ color: '#047857', fontSize: 13, lineHeight: 19, marginTop: 4 }}>
+                    Tap a day above to redo it, or save — you can still fine-tune everything on the next screen.
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={reviewAndSave}
+                  style={({ pressed }) => ({ backgroundColor: '#111', borderRadius: 100, paddingVertical: 16, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
+                >
+                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Review &amp; save your {days} days ›</Text>
+                </Pressable>
+              </View>
             ) : (
               <View>
-                <Text style={{ color: '#111', fontSize: 14.5, fontWeight: '600', marginBottom: 10 }}>
-                  What do you feel like on day {togetherDays.length + 1}?
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={{ flex: 1, color: '#111', fontSize: 14.5, fontWeight: '600' }}>
+                    {editingDay !== null ? `Re-plan day ${targetDay} — what now?` : `What do you feel like on day ${targetDay}?`}
+                  </Text>
+                  {editingDay !== null ? (
+                    <Pressable onPress={cancelEdit} hitSlop={8}>
+                      <Text style={{ color: '#9CA3AF', fontSize: 13, fontWeight: '600' }}>Cancel</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   {['Surprise me', 'Relaxed & slow', 'Big sightseeing', 'Food & markets', 'Nature & outdoors', 'Culture & history'].map((v) => {
                     const on = dayRequest.trim() === v;
@@ -1034,7 +1097,9 @@ export default function PlanTripScreen() {
                   disabled={dayBuilding}
                   style={({ pressed }) => ({ marginTop: 14, backgroundColor: '#111', borderRadius: 100, paddingVertical: 16, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }] })}
                 >
-                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>Plan day {togetherDays.length + 1} ›</Text>
+                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>
+                    {editingDay !== null ? `Re-plan day ${targetDay} ›` : `Plan day ${targetDay} ›`}
+                  </Text>
                 </Pressable>
               </View>
             )}
