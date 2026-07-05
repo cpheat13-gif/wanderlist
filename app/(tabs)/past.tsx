@@ -132,7 +132,7 @@ export default function PastScreen() {
           {trips.map((trip) => (
             <Pressable
               key={trip.id}
-              onPress={() => router.push(`/discover/${trip.id}`)}
+              onPress={() => router.push(`/memories/${trip.id}`)}
               onLongPress={() => confirmDelete(trip)}
               style={({ pressed }) => ({
                 width: CARD_WIDTH,

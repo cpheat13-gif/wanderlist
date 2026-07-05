@@ -17,6 +17,19 @@ export interface Trip {
   travelers: number | null;
   season: string | null;
   est_cost_per_person: number | null;
+  recap: string | null;
+  keepsake: string | null;
+  created_at: string;
+}
+
+export interface Memory {
+  id: string;
+  trip_id: string;
+  created_by: string;
+  photo_path: string;
+  caption: string | null;
+  note: string | null;
+  is_favourite: boolean;
   created_at: string;
 }
 

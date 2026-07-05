@@ -71,6 +71,7 @@ function RootNavigator() {
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="friends/index" options={{ headerShown: false }} />
       <Stack.Screen name="friends/[userId]" options={{ headerShown: false }} />
+      <Stack.Screen name="memories/[tripId]" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );

@@ -50,13 +50,13 @@ export default function FriendProfileScreen() {
     router.push({ pathname: '/destination/custom', params });
   }
 
-  function Grid({ trips }: { trips: Trip[] }) {
+  function Grid({ trips, memoriesMode }: { trips: Trip[]; memoriesMode?: boolean }) {
     return (
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {trips.map((trip) => (
           <Pressable
             key={trip.id}
-            onPress={() => openTrip(trip)}
+            onPress={() => (memoriesMode ? router.push(`/memories/${trip.id}`) : openTrip(trip))}
             style={({ pressed }) => ({ width: CARD_WIDTH, height: 200, borderRadius: 20, overflow: 'hidden', backgroundColor: '#E9EAEC', transform: [{ scale: pressed ? 0.97 : 1 }] })}
           >
             {trip.cover_photo_url ? (
@@ -119,7 +119,7 @@ export default function FriendProfileScreen() {
           {past.length === 0 ? (
             <Text style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#9CA3AF', fontSize: 14 }}>No past trips shared yet.</Text>
           ) : (
-            <Grid trips={past} />
+            <Grid trips={past} memoriesMode />
           )}
         </ScrollView>
       )}
